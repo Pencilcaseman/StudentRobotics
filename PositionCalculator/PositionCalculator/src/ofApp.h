@@ -91,7 +91,7 @@ public:
 		ofSetLineWidth(2);
 		ofFill();
 
-		ofSetColor(170, 0, 170);
+		ofSetColor(50, 170, 50);
 		for (const auto& marker : m_markers)
 			ofDrawCircle(m_pos.x + marker.x, m_pos.y + marker.y, 10);
 	}
@@ -163,10 +163,17 @@ public:
 			double theta = std::atan(dy / dx) - m_thetaUnknown;
 			while (theta > 3.1415926 * 2) theta -= 3.1415926 * 2;
 			while (theta < 0) theta += 3.1415926 * 2;
-			std::cout << "Theta: " << theta << "\n";
 			double rayAngle = m_fov / 2;
+
+			std::cout << "Theta: " << theta << " | " << -rayAngle + m_thetaUnknown << ", " << (theta < rayAngle + m_thetaUnknown) << "\n";
+
 			if (theta > -rayAngle + m_thetaUnknown && theta < rayAngle + m_thetaUnknown)
 				visible.emplace_back(Marker(marker.x, marker.y, sqrt(dx * dx + dy * dy)));
+
+			ofSetColor(255, 0, 255);
+			ofDrawCircle(marker.x, marker.y, 15);
+
+			break;
 		}
 		return visible;
 	}
