@@ -1,10 +1,10 @@
-#ifndef OF_APP
-#define OF_APP
+#pragma once
 
 #include "ofMain.h"
 
 #include <vector>
 #include <cstdint>
+#include <cmath>
 
 class ofApp : public ofBaseApp {
 
@@ -42,7 +42,7 @@ struct Vec2 {
 
 struct Marker {
 public:
-	Marker(double x = 0, double y = 0) : x(x), y(y) {}
+	Marker(double x = 0, double y = 0, double dist = 0) : x(x), y(y), dist(dist) {}
 	double x, y, dist = 0;
 };
 
@@ -72,15 +72,15 @@ public:
 
 		// Right side
 		for (int64_t i = 0; i < markersPerSide; ++i)
-			m_markers[i] = Marker(m_size.x, (i + 0.5) * markerDist);
+			m_markers[i + markersPerSide] = Marker(m_size.x, (i + 0.5) * markerDist);
 
 		// Bottom side
 		for (int64_t i = 0; i < markersPerSide; ++i)
-			m_markers[i] = Marker((i + 0.5) * markerDist, m_size.y);
+			m_markers[i + markersPerSide * 2] = Marker((i + 0.5) * markerDist, m_size.y);
 
 		// Left side
 		for (int64_t i = 0; i < markersPerSide; ++i)
-			m_markers[i] = Marker(0, (i + 0.5) * markerDist);
+			m_markers[i + markersPerSide * 3] = Marker(0, (i + 0.5) * markerDist);
 	}
 
 	void draw() const {
@@ -93,7 +93,7 @@ public:
 
 		ofSetColor(170, 0, 170);
 		for (const auto& marker : m_markers)
-			ofDrawCircle(m_pos.x + marker.x, m_pos.y + marker.y, 5);
+			ofDrawCircle(m_pos.x + marker.x, m_pos.y + marker.y, 10);
 	}
 
 public:
@@ -155,12 +155,20 @@ public:
 		ofDrawLine(origin.x, origin.y, end2.x, end2.y);
 	}
 
-	/// <summary>
-	/// 
-	/// </summary>
-	/// <returns></returns>
-	std::vector<Vec2> see() const {
-
+	std::vector<Marker> see(const World& world) const {
+		std::vector<Marker> visible;
+		for (const auto& marker : world.m_markers) {
+			// Find the angle from the robot to the marker
+			double dy = world.m_pos.y + marker.y - m_posUnknown.y, dx = world.m_pos.x + marker.y - m_posUnknown.x;
+			double theta = std::atan(dy / dx) - m_thetaUnknown;
+			while (theta > 3.1415926 * 2) theta -= 3.1415926 * 2;
+			while (theta < 0) theta += 3.1415926 * 2;
+			std::cout << "Theta: " << theta << "\n";
+			double rayAngle = m_fov / 2;
+			if (theta > -rayAngle + m_thetaUnknown && theta < rayAngle + m_thetaUnknown)
+				visible.emplace_back(Marker(marker.x, marker.y, sqrt(dx * dx + dy * dy)));
+		}
+		return visible;
 	}
 
 public:
@@ -184,5 +192,3 @@ public:
 	Vec2 m_posUnknown;
 	double m_thetaUnknown = 0;
 };
-
-#endif // OF_APP

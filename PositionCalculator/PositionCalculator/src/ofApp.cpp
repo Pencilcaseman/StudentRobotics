@@ -6,10 +6,11 @@ World world;
 //--------------------------------------------------------------
 void ofApp::setup() {
 	srRobot = Robot(Vec2(50, 50));
-	srRobot.setPosUnknown(100, 100, 0);
+	srRobot.setPosUnknown(400, 400, 0);
 
 	world = World({ 50, 50 }, { ofGetWindowWidth() - 400, ofGetWindowWidth() - 400 }, {});
-	world.populateMarkers(28);
+	// world.populateMarkers(28);
+	world.populateMarkers(4);
 }
 
 //--------------------------------------------------------------
@@ -26,8 +27,7 @@ void ofApp::draw() {
 
 	srRobot.m_thetaUnknown += 0.01;
 
-	ofSetColor(0, 0, 255);
-	ofDrawCircle(100, 100, 5);
+	std::cout << srRobot.see(world).size() << "\n";
 }
 
 //--------------------------------------------------------------
