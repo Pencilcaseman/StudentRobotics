@@ -6,6 +6,8 @@
 #include <cstdint>
 #include <cmath>
 
+#include "vector.hpp"
+
 class ofApp : public ofBaseApp {
 
 public:
@@ -34,12 +36,6 @@ inline double rad2deg(double rad) {
 	return rad * (180 / PI);
 }
 
-struct Vec2 {
-	template<typename T = double>
-	Vec2(T x = 0, T y = 0) : x(x), y(y) {}
-	double x = 0, y = 0;
-};
-
 struct Marker {
 public:
 	Marker(double x = 0, double y = 0, double dist = 0) : x(x), y(y), dist(dist) {}
@@ -50,7 +46,7 @@ class World {
 public:
 	World() = default;
 
-	World(const Vec2& p1, const Vec2& size, const std::vector<Marker>& markers)
+	World(const Vec3d& p1, const Vec3d& size, const std::vector<Marker>& markers)
 		: m_pos(p1), m_size(size), m_markers(markers) {}
 
 	World& operator=(const World& other) {
@@ -97,8 +93,8 @@ public:
 	}
 
 public:
-	Vec2 m_pos;
-	Vec2 m_size;
+	Vec3d m_pos;
+	Vec3d m_size;
 	std::vector<Marker> m_markers;
 };
 
@@ -106,7 +102,7 @@ class Robot {
 public:
 	Robot() {}
 
-	Robot(const Vec2& size, double fov = 72) {
+	Robot(const Vec3d& size, double fov = 72) {
 		m_size = size;
 		m_relCameraPos = { 0, 0 };
 		m_fov = deg2rad(fov);
@@ -141,9 +137,9 @@ public:
 		ofPopMatrix();
 
 		// Find world-space origin of ray
-		Vec2 origin = m_posUnknown;
+		Vec3d origin = m_posUnknown;
 		double rayAngle = m_fov / 2;
-		Vec2 end1, end2;
+		Vec3d end1, end2;
 		end1.x = origin.x + 100 * cos(rayAngle + m_thetaUnknown);
 		end1.y = origin.y + 100 * sin(rayAngle + m_thetaUnknown);
 
@@ -158,23 +154,28 @@ public:
 	std::vector<Marker> see(const World& world) const {
 		std::vector<Marker> visible;
 		for (const auto& marker : world.m_markers) {
-			// Find the angle from the robot to the marker
-			double dy = world.m_pos.y + marker.y - m_posUnknown.y, dx = world.m_pos.x + marker.y - m_posUnknown.x;
-			double theta = std::atan(dy / dx); // -m_thetaUnknown;
-			while (theta > 3.1415926 * 2) theta -= 3.1415926 * 2;
-			while (theta < 0) theta += 3.1415926 * 2;
+			// Position offsets from marker to robot
+			Vec3d offset(
+				world.m_pos.x + marker.x - m_posUnknown.x,
+				world.m_pos.y + marker.y - m_posUnknown.y
+			);
+
 			double rayAngle = m_fov / 2;
+			double rayTheta = atan(sin(rayAngle + m_thetaUnknown) / cos(rayAngle + m_thetaUnknown));
 
-			std::cout << dx << " | " << dy << "\n";
-			// std::cout << "Theta: " << theta << " | " << (-rayAngle + m_thetaUnknown) << ", " << (rayAngle + m_thetaUnknown) << "\n";
+			double theta = atan(offset.y / offset.x);
 
-			if (theta > -rayAngle + m_thetaUnknown && theta < rayAngle + m_thetaUnknown)
-				visible.emplace_back(Marker(marker.x, marker.y, sqrt(dx * dx + dy * dy)));
+			if (theta > 0 && rayTheta < 0) rayTheta += PI;
 
-			ofSetColor(255, 0, 255);
-			ofDrawCircle(marker.x, marker.y, 15);
+			// if (&marker == &world.m_markers[0])
+			// 	std::cout << "DX: " << offset.x << " | DY: " << offset.y << " | " << "Theta: " << theta << " | Ray Theta MIN: " << rayTheta << " | Ray Theta MAX: " << rayTheta - rayAngle * 2 << "\n";
 
-			break;
+			if (theta < rayTheta && theta > rayTheta - rayAngle * 2 && offset.dot(Vec3d(cos(rayAngle + m_thetaUnknown), sin(rayAngle + m_thetaUnknown))) > 0) {
+				ofSetColor(170, 170, 255);
+				ofDrawCircle(world.m_pos.x + marker.x, world.m_pos.y + marker.y, 20);
+			}
+
+			// break;
 		}
 		return visible;
 	}
@@ -188,10 +189,10 @@ public:
 	/// <summary>
 	/// Width and height of robot
 	/// </summary>
-	Vec2 m_size;
+	Vec3d m_size;
 
 	// Position of camera within robot from top left corner
-	Vec2 m_relCameraPos;
+	Vec3d m_relCameraPos;
 
 	/// <summary>
 	/// Field of view of the camera. Defines how much the camera can
@@ -202,6 +203,6 @@ public:
 	/// <summary>
 	/// Screen-space variables used for drawing the robot to the window
 	/// </summary>
-	Vec2 m_posUnknown;
+	Vec3d m_posUnknown;
 	double m_thetaUnknown = 0;
 };

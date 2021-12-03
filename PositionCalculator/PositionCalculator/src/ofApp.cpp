@@ -5,12 +5,12 @@ World world;
 
 //--------------------------------------------------------------
 void ofApp::setup() {
-	srRobot = Robot(Vec2(50, 50));
+	srRobot = Robot(Vec3d(50, 50));
 	srRobot.setPosUnknown(400, 400, 0);
 
 	world = World({ 50, 50 }, { ofGetWindowWidth() - 400, ofGetWindowWidth() - 400 }, {});
 	// world.populateMarkers(28);
-	world.populateMarkers(4);
+	world.populateMarkers(28);
 }
 
 //--------------------------------------------------------------
