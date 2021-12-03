@@ -160,12 +160,13 @@ public:
 		for (const auto& marker : world.m_markers) {
 			// Find the angle from the robot to the marker
 			double dy = world.m_pos.y + marker.y - m_posUnknown.y, dx = world.m_pos.x + marker.y - m_posUnknown.x;
-			double theta = std::atan(dy / dx) - m_thetaUnknown;
+			double theta = std::atan(dy / dx); // -m_thetaUnknown;
 			while (theta > 3.1415926 * 2) theta -= 3.1415926 * 2;
 			while (theta < 0) theta += 3.1415926 * 2;
 			double rayAngle = m_fov / 2;
 
-			std::cout << "Theta: " << theta << " | " << -rayAngle + m_thetaUnknown << ", " << (theta < rayAngle + m_thetaUnknown) << "\n";
+			std::cout << dx << " | " << dy << "\n";
+			// std::cout << "Theta: " << theta << " | " << (-rayAngle + m_thetaUnknown) << ", " << (rayAngle + m_thetaUnknown) << "\n";
 
 			if (theta > -rayAngle + m_thetaUnknown && theta < rayAngle + m_thetaUnknown)
 				visible.emplace_back(Marker(marker.x, marker.y, sqrt(dx * dx + dy * dy)));
@@ -176,6 +177,11 @@ public:
 			break;
 		}
 		return visible;
+	}
+
+	void update() {
+		while (m_thetaUnknown > 3.1415926 * 2) m_thetaUnknown -= 3.1415926 * 2;
+		while (m_thetaUnknown < 0) m_thetaUnknown += 3.1415926 * 2;
 	}
 
 public:
