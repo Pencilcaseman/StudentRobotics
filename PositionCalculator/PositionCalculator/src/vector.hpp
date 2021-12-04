@@ -44,8 +44,7 @@ public:
 	 *
 	 * Vectors must have same dimensions. To cast, use Vec.as<TYPE, DIMS>()
 	 */
-
-	template<typename T>
+	template<typename T, typename std::enable_if<dims != (int64_t)3, int>::type = 0>
 	Vec<Common<T>, dims> operator+(const Vec<T, dims>& other) const {
 		Vec<Common<T>, dims> res;
 		for (int64_t i = 0; i < dims; ++i) res[i] = m_components[i] + other[i];
@@ -203,6 +202,170 @@ Vec<typename std::common_type<T, DTYPE>::type, dims> operator/(const T& value, c
 	Vec<typename std::common_type<T, DTYPE>::type, dims> res;
 	for (int64_t i = 0; i < dims; ++i) res[i] = value / vec[i];
 	return res;
+}
+
+// ==============================================================================================
+// ==============================================================================================
+// ==============================================================================================
+// ==============================================================================================
+
+template<typename DTYPE>
+class Vec<DTYPE, 3> {
+	template<typename T>
+	using Common = typename std::common_type<DTYPE, T>::type;
+
+public:
+	Vec() {};
+
+	template<typename X = DTYPE, typename Y = DTYPE, typename Z = DTYPE>
+	Vec(X x, Y y = 0, Z z = 0) : x(x), y(y), z(z) {}
+
+	Vec(const Vec<DTYPE, 3>& other) {
+		x = other.x;
+		y = other.y;
+		z = other.z;
+	}
+
+	Vec<DTYPE, 3>& operator=(const Vec<DTYPE, 3>& other) {
+		if (this == &other) return *this;
+		x = other.x;
+		y = other.y;
+		z = other.z;
+		return *this;
+	}
+
+	/**
+	 * Implement indexing (const and non-const)
+	 * Functions take a single index and return a scalar value
+	 */
+
+	const DTYPE& operator[](int64_t index) const { return m_components[index]; }
+	DTYPE& operator[](int64_t index) { return m_components[index]; }
+
+	/**
+	 * Implement simple arithmetic operators + - * /
+	 *
+	 * Operations take two Vec objects and return a new vector (with common type)
+	 * containing the result of the element-wise operation.
+	 *
+	 * Vectors must have same dimensions. To cast, use Vec.as<TYPE, DIMS>()
+	 */
+	template<typename T>
+	Vec<Common<T>, 3> operator+(const Vec<T, 3>& other) const {
+		return Vec<Common<T>, 3>(x + other.x, y + other.y, z + other.z);
+	}
+
+	template<typename T>
+	Vec<Common<T>, 3> operator-(const Vec<T, 3>& other) const {
+		return Vec<Common<T>, 3>(x - other.x, y - other.y, z - other.z);
+	}
+
+	template<typename T>
+	Vec<Common<T>, 3> operator*(const Vec<T, 3>& other) const {
+		return Vec<Common<T>, 3>(x * other.x, y * other.y, z * other.z);
+	}
+
+	template<typename T>
+	Vec<Common<T>, 3> operator/(const Vec<T, 3>& other) const {
+		return Vec<Common<T>, 3>(x / other.x, y / other.y, z / other.z);
+	}
+
+	/**
+	 * Implement simple arithmetic operators + - * /
+	 *
+	 * Operations take a vector and a scalar, and return a new vector (with common type)
+	 * containing the result of the element-wise operation.
+	 */
+
+	template<typename T>
+	Vec<Common<T>, 3> operator+(const T& other) const {
+		return Vec<Common<T>, 3>(x + other, y + other, z + other);
+	}
+
+	template<typename T>
+	Vec<Common<T>, 3> operator-(const T& other) const {
+		return Vec<Common<T>, 3>(x - other, y - other, z - other);
+	}
+
+	template<typename T>
+	Vec<Common<T>, 3> operator*(const T& other) const {
+		return Vec<Common<T>, 3>(x * other, y * other, z * other);
+	}
+
+	template<typename T>
+	Vec<Common<T>, 3> operator/(const T& other) const {
+		return Vec<Common<T>, 3>(x / other, y / other, z / other);
+	}
+
+	/**
+	 * Return the magnitude squared of a vector
+	 */
+	DTYPE mag2() const {
+		return x * x + y * y + z * z;
+	}
+
+	/**
+	 * Return the magnitude of a vector
+	 */
+	DTYPE mag() const {
+		return sqrt(x * x + y * y + z * z);
+	}
+
+	/**
+	 * Compute the vector dot product
+	 * AxBx + AyBy + AzCz + ...
+	 */
+	template<typename T>
+	Common<T> dot(const Vec<T, 3>& other) {
+		return x * other.x + y * other.y + z * other.z;
+	}
+
+	/**
+	 * Compute the vector cross product
+	 */
+	template<typename T>
+	Vec<Common<T>, 3> cross(const Vec<T, 3>& other) const {
+		return Vec<Common<T>, 3>(
+			y * other.z - z * other.y,
+			z * other.x - x * other.z,
+			x * other.y - y * other.x
+			);
+	}
+
+	std::string str() const {
+		return std::string("(") + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ")";
+	}
+
+	DTYPE x = 0;
+	DTYPE y = 0;
+	DTYPE z = 0;
+};
+
+/**
+ * Implement simple arithmetic operators + - * /
+ *
+ * Operations take a scalar and a vector and return a new vector (with common type)
+ * containing the result of the element-wise operation.
+ */
+
+template<typename T, typename DTYPE>
+Vec<typename std::common_type<T, DTYPE>::type, 3> operator+(const T& value, const Vec<DTYPE, 3>& vec) {
+	return Vec<typename std::common_type<T, DTYPE>::type, 3>(value + vec.x, value + vec.y, value + vec.z);
+}
+
+template<typename T, typename DTYPE>
+Vec<typename std::common_type<T, DTYPE>::type, 3> operator-(const T& value, const Vec<DTYPE, 3>& vec) {
+	return Vec<typename std::common_type<T, DTYPE>::type, 3>(value - vec.x, value - vec.y, value - vec.z);
+}
+
+template<typename T, typename DTYPE>
+Vec<typename std::common_type<T, DTYPE>::type, 3> operator*(const T& value, const Vec<DTYPE, 3>& vec) {
+	return Vec<typename std::common_type<T, DTYPE>::type, 3>(value * vec.x, value * vec.y, value * vec.z);
+}
+
+template<typename T, typename DTYPE>
+Vec<typename std::common_type<T, DTYPE>::type, 3> operator/(const T& value, const Vec<DTYPE, 3>& vec) {
+	return Vec<typename std::common_type<T, DTYPE>::type, 3>(value / vec.x, value / vec.y, value / vec.z);
 }
 
 using Vec2i = Vec<int64_t, 2>;

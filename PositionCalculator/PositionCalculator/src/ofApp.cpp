@@ -10,12 +10,11 @@ void ofApp::setup() {
 	if (!defaultFont.load(OF_TTF_SANS, 20))
 		std::cout << "Error loading font. Any text will (most likely) not be rendered\n";
 
-	srRobot = Robot(Vec3d(50, 50), 72);
-	srRobot.setPosUnknown({ 200, 200 }, PI * 8 / 5);
-
 	world = World({ 50, 50 }, { 575, 575 }, {});
-	// world.populateMarkers(28);
 	world.populateMarkers(28);
+
+	srRobot = Robot(Vec3d(50, 50), 72);
+	srRobot.setPosUnknown({ world.m_pos.x + 0.5 * metreToPixel, world.m_pos.y + 0.5 * metreToPixel }, PI / 4);
 }
 
 //--------------------------------------------------------------

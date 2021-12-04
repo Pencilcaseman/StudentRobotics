@@ -13,5 +13,37 @@ int main() {
 	// pass in width and height too:
 	ofRunApp(new ofApp());
 
+	uint64_t iters = 10000000000;
+	{
+		auto a = Vec3d(1 + 1E-15, 1 + 1E-15, 1 + 1E-15);
+		auto b = Vec3d(123, 456, 789);
+		Vec3d res;
+
+		double start = (double)std::chrono::high_resolution_clock().now().time_since_epoch().count();
+		for (uint64_t i = 0; i < iters; ++i) {
+			b = a * b;
+		}
+		double end = (double)std::chrono::high_resolution_clock().now().time_since_epoch().count();
+		std::cout << "Elapsed: " << (end - start) / 1000000 << " ms\n";
+		std::cout << "Average: " << (end - start) / (double)iters << " ns\n";
+		std::cout << b.str() << "\n";
+	}
+
+	{
+		auto a = glm::vec<3, double>(1 + 1E-15, 1 + 1E-15, 1 + 1E-15);
+		auto b = glm::vec<3, double>(123, 456, 789);
+		glm::vec<3, double> res;
+
+		double start = (double)std::chrono::high_resolution_clock().now().time_since_epoch().count();
+		for (uint64_t i = 0; i < iters; ++i) {
+			b = a * b;
+		}
+		double end = (double)std::chrono::high_resolution_clock().now().time_since_epoch().count();
+		std::cout << "Elapsed: " << (end - start) / 1000000 << " ms\n";
+		std::cout << "Average: " << (end - start) / (double)iters << " ns\n";
+
+		std::cout << b << "\n";
+	}
+
 	return 0;
 }
