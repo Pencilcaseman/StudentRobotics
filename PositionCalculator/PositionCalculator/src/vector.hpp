@@ -10,7 +10,7 @@ class Vec {
 	using Common = typename std::common_type<DTYPE, T>::type;
 
 public:
-	Vec() = default;
+	Vec() {};
 
 	template<typename X, typename ...YZ>
 	Vec(X x, YZ ... yz) : m_components{ (DTYPE)x, (DTYPE)yz... } {

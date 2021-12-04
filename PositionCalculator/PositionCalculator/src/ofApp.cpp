@@ -2,13 +2,18 @@
 
 Robot srRobot;
 World world;
+bool moveRobotToMouse = false;
 
 //--------------------------------------------------------------
 void ofApp::setup() {
-	srRobot = Robot(Vec3d(50, 50));
-	srRobot.setPosUnknown(400, 400, 0);
+	// Set up the default font
+	if (!defaultFont.load(OF_TTF_SANS, 20))
+		std::cout << "Error loading font. Any text will (most likely) not be rendered\n";
 
-	world = World({ 50, 50 }, { ofGetWindowWidth() - 400, ofGetWindowWidth() - 400 }, {});
+	srRobot = Robot(Vec3d(50, 50), 72);
+	srRobot.setPosUnknown({ 400, 400 }, 0);
+
+	world = World({ 50, 50 }, { 800, 800 }, {});
 	// world.populateMarkers(28);
 	world.populateMarkers(28);
 }
@@ -25,9 +30,17 @@ void ofApp::draw() {
 	world.draw();
 	srRobot.draw();
 
-	srRobot.m_thetaUnknown += 0.01;
-
-	std::cout << srRobot.see(world).size() << "\n";
+	std::vector<Marker> visible = srRobot.see(world);
+	int64_t xCoord = ofGetWindowWidth() - 350;
+	int64_t yCoord = 50;
+	int64_t yOffset = 0;
+	for (const auto& marker : visible) {
+		std::stringstream stream;
+		stream.precision(4);
+		stream << "X: " << marker.cartesian.x << "  |  Y: " << marker.cartesian.y;
+		defaultFont.drawString(stream.str(), xCoord, yCoord + yOffset);
+		yOffset += 30;
+	}
 }
 
 //--------------------------------------------------------------
@@ -47,12 +60,32 @@ void ofApp::mouseMoved(int x, int y) {
 
 //--------------------------------------------------------------
 void ofApp::mouseDragged(int x, int y, int button) {
+	if (button == 0) { // Move robot to mouse if left mouse button pressed
+		if ((Vec3d(x, y) - srRobot.m_posUnknown).mag2() <= (srRobot.m_size / 2).mag2())
+			moveRobotToMouse = true;
 
+		if (moveRobotToMouse)
+			srRobot.setPosUnknown({ x, y });
+	}
+	else {
+		moveRobotToMouse = false;
+	}
+
+	if (button == 2) { // Rotate robot to point to mouse if right mouse button dragged
+		double toMouse = atan((mouseY - srRobot.m_posUnknown.y) / (mouseX - srRobot.m_posUnknown.x));
+		if (mouseX < srRobot.m_posUnknown.x && toMouse < PI) toMouse -= PI;
+		srRobot.m_thetaUnknown = toMouse;
+	}
 }
 
 //--------------------------------------------------------------
 void ofApp::mousePressed(int x, int y, int button) {
-
+	// Same code as in mouseDragged, but works for a single click
+	if (button == 2) { // Rotate robot to point to mouse if right mouse button pressed
+		double toMouse = atan((mouseY - srRobot.m_posUnknown.y) / (mouseX - srRobot.m_posUnknown.x));
+		if (mouseX < srRobot.m_posUnknown.x && toMouse < PI) toMouse -= PI;
+		srRobot.m_thetaUnknown = toMouse;
+	}
 }
 
 //--------------------------------------------------------------
