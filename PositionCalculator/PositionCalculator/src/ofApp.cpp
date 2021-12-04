@@ -11,9 +11,9 @@ void ofApp::setup() {
 		std::cout << "Error loading font. Any text will (most likely) not be rendered\n";
 
 	srRobot = Robot(Vec3d(50, 50), 72);
-	srRobot.setPosUnknown({ 400, 400 }, 0);
+	srRobot.setPosUnknown({ 200, 200 }, PI * 8 / 5);
 
-	world = World({ 50, 50 }, { 800, 800 }, {});
+	world = World({ 50, 50 }, { 575, 575 }, {});
 	// world.populateMarkers(28);
 	world.populateMarkers(28);
 }
@@ -31,13 +31,13 @@ void ofApp::draw() {
 	srRobot.draw();
 
 	std::vector<Marker> visible = srRobot.see(world);
-	int64_t xCoord = ofGetWindowWidth() - 350;
+	int64_t xCoord = 100 + 575;
 	int64_t yCoord = 50;
 	int64_t yOffset = 0;
 	for (const auto& marker : visible) {
 		std::stringstream stream;
 		stream.precision(4);
-		stream << "X: " << marker.cartesian.x << "  |  Y: " << marker.cartesian.y;
+		stream << "ID: " << marker.id << " | X: " << marker.cartesian.x << "  |  Y: " << marker.cartesian.y;
 		defaultFont.drawString(stream.str(), xCoord, yCoord + yOffset);
 		yOffset += 30;
 	}

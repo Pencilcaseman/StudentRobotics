@@ -9,6 +9,16 @@
 
 #include "vector.hpp"
 
+/**
+ * Scale information:
+ *
+ * Every pixel represents 1cm. The actual box is a 5.75m +- 20cm square,
+ * and the rendered board is 575 pixels square
+ */
+
+constexpr double pixelToMetre = 0.01;
+constexpr double metreToPixel = 100;
+
 static ofTrueTypeFont defaultFont;
 
 class ofApp : public ofBaseApp {
@@ -83,26 +93,41 @@ public:
 	void populateMarkers(int64_t numMarkers) {
 		m_markers = std::vector<Marker>(numMarkers);
 		int64_t markersPerSide = numMarkers / 4;
-		double markerDist = m_size.x / (double)markersPerSide;
+		double markerDist = m_size.x / (double)(markersPerSide + 1);
 
 		// Top side -- IDs count up -- Increment on X axis
 		for (int64_t i = 0; i < markersPerSide; ++i)
-			m_markers[i] = Marker(Vec3d{ (i + 0.5) * markerDist, 0 }, i);
+			m_markers[i] = Marker(Vec3d{ (i + 1) * markerDist, 0 }, i);
 
 		// Right side -- IDs count up -- Increment on Y axis
 		for (int64_t i = 0; i < markersPerSide; ++i)
-			m_markers[i + markersPerSide] = Marker(Vec3d{ m_size.x, (i + 0.5) * markerDist }, i + markersPerSide);
+			m_markers[i + markersPerSide] = Marker(Vec3d{ m_size.x, (i + 1) * markerDist }, i + markersPerSide);
 
 		// Bottom side -- IDs count *down* due to clock-wise ordering -- Increment on X axis
 		for (int64_t i = 0; i < markersPerSide; ++i)
-			m_markers[i + markersPerSide * 2] = Marker(Vec3d{ (i + 0.5) * markerDist, m_size.y }, markersPerSide * 3 - i - 1);
+			m_markers[i + markersPerSide * 2] = Marker(Vec3d{ (i + 1) * markerDist, m_size.y }, markersPerSide * 3 - i - 1);
 
 		// Left side -- IDs count *down* due to clock-wise ordering -- Increment on X axis
 		for (int64_t i = 0; i < markersPerSide; ++i)
-			m_markers[i + markersPerSide * 3] = Marker(Vec3d{ 0, (i + 0.5) * markerDist }, markersPerSide * 4 - i - 1);
+			m_markers[i + markersPerSide * 3] = Marker(Vec3d{ 0, (i + 1) * markerDist }, markersPerSide * 4 - i - 1);
 	}
 
 	void draw() const {
+		// Draw scoring zones
+		ofSetLineWidth(1);
+		ofSetColor(0);
+		ofDrawLine(m_pos.x, m_pos.y + 2.5 * metreToPixel, m_pos.x + 2.5 * metreToPixel, m_pos.y);
+		ofDrawLine(m_pos.x + m_size.x - 2.5 * metreToPixel, m_pos.y, m_pos.x + m_size.x, m_pos.y + 2.5 * metreToPixel);
+		ofDrawLine(m_pos.x + m_size.x, m_pos.y + m_size.y - 2.5 * metreToPixel, m_pos.x + m_size.x - 2.5 * metreToPixel, m_pos.y + m_size.y);
+		ofDrawLine(m_pos.x, m_pos.y + m_size.y - 2.5 * metreToPixel, m_pos.x + 2.5 * metreToPixel, m_pos.y + m_size.y);
+
+		// Draw starting zones
+		ofSetColor(201, 164, 85);
+		ofDrawRectangle(m_pos.x, m_pos.y, 1 * metreToPixel, 1 * metreToPixel);
+		ofDrawRectangle(m_pos.x + m_size.x - 1 * metreToPixel, m_pos.y, 1 * metreToPixel, 1 * metreToPixel);
+		ofDrawRectangle(m_pos.x + m_size.x - 1 * metreToPixel, m_pos.y + m_size.y - 1 * metreToPixel, 1 * metreToPixel, 1 * metreToPixel);
+		ofDrawRectangle(m_pos.x, m_pos.y + m_size.y - 1 * metreToPixel, 1 * metreToPixel, 1 * metreToPixel);
+
 		// Draw bounding box
 		ofSetColor(170, 50, 50);
 		ofNoFill();
@@ -227,11 +252,10 @@ public:
 
 				double alpha = theta - m_thetaUnknown;
 				if (offset.x < 0) alpha += PI;
-				// std::cout << "Info: " << marker.distance  << " * " << cos(alpha) << " = " << marker.distance * cos(alpha) << "\n";
 
 				Marker newMarker;
 				newMarker.id = marker.id;
-				newMarker.distance = offset.mag();
+				newMarker.distance = offset.mag() * pixelToMetre;
 				newMarker.cartesian = Vec3d(newMarker.distance * sin(alpha), newMarker.distance * cos(alpha));
 				visible.emplace_back(newMarker);
 			}
