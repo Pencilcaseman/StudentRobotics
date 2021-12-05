@@ -239,8 +239,10 @@ public:
 				ofDrawCircle(world.m_pos.x + marker.cartesian.x, world.m_pos.y + marker.cartesian.y, 15);
 
 				// Label each marker
-				ofSetColor(255);
-				defaultFont.drawString(std::to_string(marker.id), world.m_pos.x + marker.cartesian.x - 30, world.m_pos.y + marker.cartesian.y - 30);
+				if (world.m_markers.size() / 4 < 20) {
+					ofSetColor(255);
+					defaultFont.drawString(std::to_string(marker.id), world.m_pos.x + marker.cartesian.x - 30, world.m_pos.y + marker.cartesian.y - 30);
+				}
 
 				// =============================================================================================================
 

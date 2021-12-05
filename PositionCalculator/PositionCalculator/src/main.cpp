@@ -4,7 +4,6 @@
 #include "vector.hpp"
 #include <chrono>
 
-//========================================================================
 int main() {
 	ofSetupOpenGL(575 + 500, 575 + 100, OF_WINDOW);			// <-------- setup the GL context
 
@@ -13,9 +12,13 @@ int main() {
 	// pass in width and height too:
 	ofRunApp(new ofApp());
 
-	uint64_t iters = 10000000000;
+	//========================================================//
+	// Ignore stuff below here. This is just me testing stuff //
+	//========================================================//
+
+	uint64_t iters = 13954300;
 	{
-		auto a = Vec3d(1 + 1E-15, 1 + 1E-15, 1 + 1E-15);
+		auto a = Vec3d(1 + 1E-12, 1 + 1E-12, 1 + 1E-12);
 		auto b = Vec3d(123, 456, 789);
 		Vec3d res;
 
