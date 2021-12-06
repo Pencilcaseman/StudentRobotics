@@ -34,7 +34,7 @@ void ofApp::draw() {
 	// Note: It is inefficient to run srRobot.see() and srRobot.calculateWorldspacePosition() each draw
 	//       call, but it is useful for debugging purposes. The code below can be commented out if needed
 	std::vector<Marker> visible = srRobot.see();
-	int64_t xCoord = 100 + 575;
+	int64_t xCoord = 200 + 575;
 	int64_t yCoord = 50;
 	int64_t yOffset = 0;
 	for (int64_t i = 0; i < (visible.size() > 28 ? 28 : visible.size()); ++i) {

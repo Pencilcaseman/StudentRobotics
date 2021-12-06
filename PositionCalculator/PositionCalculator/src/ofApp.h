@@ -20,7 +20,7 @@
 constexpr double pixelToMetre = 0.01; // Actual number of markers +- 2cm (20mm)
 constexpr double metreToPixel = 100;
 
-constexpr int64_t worldMarkers = 12; // Show a few markers for debugging purposes
+constexpr int64_t worldMarkers = 8; // Show a few markers for debugging purposes
 constexpr int64_t markerError = 0.00;
 
 // constexpr int64_t worldMarkers = 28; // Just more markers
@@ -365,28 +365,40 @@ public:
 		double invMd = 1.0 / Md; // (M2.x + M1.x);
 		double D1 = M1.mag();
 		double D2 = M2.mag();
-		double alpha = abs(M1.x) > 1E-2 ? atan(M1.y / M1.x) : HALF_PI;
-		double beta = abs(M2.x) > 1E-2 ? atan(M2.y / M2.x) : HALF_PI;
+		double alpha = abs(M1.x) > 1E-3 ? atan(M1.y / M1.x) : HALF_PI;
+		double beta = abs(M2.x) > 1E-3 ? atan(M2.y / M2.x) : HALF_PI;
+		double alphaTmp = alpha;
+		double betaTmp = beta;
+
+		if (M1.x < 0) alpha += PI;
+		if (M2.x < 0) beta += PI;
+		alpha = PI - alpha;
+
+		// if (alpha < 90 && alphaTmp < 0) alpha += HALF_PI;
+
 		double gamma = PI - alpha - beta;
 		double theta = asin(D2 * sin(gamma) * invMd);
 		double mu = asin(D1 * sin(gamma) * invMd);
 
-		// std::cout << "Md: " << Md  << " M1x: " << M1.x << " M1y: " << M1.y << " D1: " << D1 << " D2: " << D2 << " Alpha: " << alpha << " Beta: " << beta << " Gamma: " << gamma << " Theta: " << theta << " Mu: " << mu << "\n";
+		// if (M1.x < 0 && theta < HALF_PI)
+		// if (M1.x > 0) theta = PI - theta;
+		// if (M2.x > 0 && mu < 0) mu *= -1;
 
-		if (M1.x < 0 && theta < 0) theta *= -1;
-		if (M2.x > 0 && mu < 0) mu *= -1;
-
-		defaultFont.drawString("Theta: " + std::to_string(rad2deg(theta)) + "°\n" +
-			"Mu: " + std::to_string(rad2deg(mu)) + "°", 300, 300);
+		defaultFont.drawString("Alpha: " + std::to_string(rad2deg(alpha)) + "°\n" +
+			"Beta: " + std::to_string(rad2deg(beta)) + "°\n" +
+			"Theta: " + std::to_string(rad2deg(theta)) + "°\n" +
+			"Gamma: " + std::to_string(rad2deg(gamma)) + "°\n" +
+			"Mu: " + std::to_string(rad2deg(mu)) + "°\n" +
+			"sin(theta): " + std::to_string(D2 * sin(gamma) * invMd), 300, 500);
 
 		Marker worldspaceMarker1 = m_worldView.idealMarkerPosition(marker1.id);
 		Marker worldspaceMarker2 = m_worldView.idealMarkerPosition(marker2.id);
 
 		// Relative position in *world space* to the first marker
-		Vec3d relPosM1 = { D1 * sin(HALF_PI - alpha), D1 * cos(HALF_PI - alpha) };
+		Vec3d relPosM1 = { D1 * cos(alpha), D1 * sin(alpha) };
 		Vec3d worldPos = worldspaceMarker1.cartesian + relPosM1;
 
-		ofDrawCircle(m_world->m_pos.x + worldPos.x * metreToPixel, m_world->m_pos.y - worldPos.y * metreToPixel, 10);
+		ofDrawCircle(m_world->m_pos.x + worldPos.x * metreToPixel, m_world->m_pos.y + worldPos.y * metreToPixel, 10);
 
 		// =================================================================
 		// Draw a shit-ton of debugging things
