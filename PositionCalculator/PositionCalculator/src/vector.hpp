@@ -123,6 +123,10 @@ public:
 		return sqrt(mag2());
 	}
 
+	DTYPE invMag() const {
+		return DTYPE(1) / sqrt(mag2());
+	}
+
 	/**
 	 * Compute the vector dot product
 	 * AxBx + AyBy + AzCz + ...
@@ -309,6 +313,11 @@ public:
 	 */
 	DTYPE mag() const {
 		return sqrt(x * x + y * y + z * z);
+	}
+
+	DTYPE invMag() const {
+		DTYPE mag = x * x + y * y + z * z;
+		return DTYPE(1) / mag;
 	}
 
 	/**

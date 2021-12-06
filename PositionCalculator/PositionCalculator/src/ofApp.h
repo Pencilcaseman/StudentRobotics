@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cmath>
 #include <sstream>
+#include <random>
 
 #include "vector.hpp"
 
@@ -16,8 +17,17 @@
  * and the rendered board is 575 pixels square
  */
 
-constexpr double pixelToMetre = 0.01;
+constexpr double pixelToMetre = 0.01; // Actual number of markers +- 2cm (20mm)
 constexpr double metreToPixel = 100;
+
+constexpr int64_t worldMarkers = 28; // Just more markers
+constexpr int64_t markerError = 0.02;
+
+// constexpr int64_t worldMarkers = 100;
+// constexpr int64_t markerError = 0.00;
+
+// constexpr int64_t worldMarkers = 10000; // LOADS of markers to make sure stuff works
+// constexpr int64_t markerError = 0.00;
 
 static ofTrueTypeFont defaultFont;
 
@@ -54,6 +64,12 @@ inline double lerp(double start, double end, double percent) {
 	return start + (end - start) * percent;
 }
 
+inline double random(double min, double max) {
+	static std::mt19937_64 generator;
+	std::uniform_real_distribution<double> dist(min, max);
+	return dist(generator);
+}
+
 class Marker {
 public:
 	// NOTE: Some information is not stored. This is to make the program simpler
@@ -80,8 +96,14 @@ class World {
 public:
 	World() = default;
 
-	World(const Vec3d& p1, const Vec3d& size, const std::vector<Marker>& markers)
+	World(const Vec3d& p1, const Vec3d& size, const std::vector<Marker>& markers = std::vector<Marker>(0))
 		: m_pos(p1), m_size(size), m_markers(markers) {}
+
+	World(const World& other) {
+		m_pos = other.m_pos;
+		m_size = other.m_size;
+		m_markers = other.m_markers;
+	}
 
 	World& operator=(const World& other) {
 		m_pos = other.m_pos;
@@ -90,26 +112,61 @@ public:
 		return *this;
 	};
 
-	void populateMarkers(int64_t numMarkers) {
+	/// <summary>
+	/// Place numMarkers markers around the edge of the box with a random error
+	/// in range +- error (measured in meters)
+	/// </summary>
+	/// <param name="numMarkers"></param>
+	/// <param name="errorM"></param>
+	void populateMarkers(int64_t numMarkers, double error = 0) {
 		m_markers = std::vector<Marker>(numMarkers);
 		int64_t markersPerSide = numMarkers / 4;
 		double markerDist = m_size.x / (double)(markersPerSide + 1);
 
 		// Top side -- IDs count up -- Increment on X axis
 		for (int64_t i = 0; i < markersPerSide; ++i)
-			m_markers[i] = Marker(Vec3d{ (i + 1) * markerDist, 0 }, i);
+			m_markers[i] = Marker(Vec3d{ (i + 1) * markerDist + (metreToPixel * random(-error, error)), 0 }, i);
 
 		// Right side -- IDs count up -- Increment on Y axis
 		for (int64_t i = 0; i < markersPerSide; ++i)
-			m_markers[i + markersPerSide] = Marker(Vec3d{ m_size.x, (i + 1) * markerDist }, i + markersPerSide);
+			m_markers[i + markersPerSide] = Marker(Vec3d{ m_size.x, (i + 1) * markerDist + (metreToPixel * random(-error, error)) }, i + markersPerSide);
 
 		// Bottom side -- IDs count *down* due to clock-wise ordering -- Increment on X axis
 		for (int64_t i = 0; i < markersPerSide; ++i)
-			m_markers[i + markersPerSide * 2] = Marker(Vec3d{ (i + 1) * markerDist, m_size.y }, markersPerSide * 3 - i - 1);
+			m_markers[i + markersPerSide * 2] = Marker(Vec3d{ (i + 1) * markerDist + (metreToPixel * random(-error, error)), m_size.y }, markersPerSide * 3 - i - 1);
 
 		// Left side -- IDs count *down* due to clock-wise ordering -- Increment on X axis
 		for (int64_t i = 0; i < markersPerSide; ++i)
-			m_markers[i + markersPerSide * 3] = Marker(Vec3d{ 0, (i + 1) * markerDist }, markersPerSide * 4 - i - 1);
+			m_markers[i + markersPerSide * 3] = Marker(Vec3d{ 0, (i + 1) * markerDist + (metreToPixel * random(-error, error)) }, markersPerSide * 4 - i - 1);
+	}
+
+	Marker idealMarkerPosition(int64_t id) {
+		int64_t markersPerSide = m_markers.size() / 4;
+		double markerDist = m_size.x / (double)(markersPerSide + 1);
+
+		if (id >= 0 && id < markersPerSide) {
+			// Top side of the box
+			return Marker(Vec3d{ (id + 1) * markerDist, 0 }, id);
+		}
+
+		if (id < markersPerSide * 2) {
+			// Right side of the box
+			return Marker(Vec3d{ m_size.x, (id - markersPerSide + 1) * markerDist }, id);
+		}
+
+		if (id < markersPerSide * 3) {
+			// Top of the box
+			return Marker(Vec3d{ (id - markersPerSide * 2 + 1) * markerDist, m_size.y }, id);
+		}
+
+		if (id < markersPerSide * 4) {
+			// Top of the box
+			return Marker(Vec3d{ 0, (id - markersPerSide * 3 + 1) * markerDist }, id);
+		}
+
+		std::cout << "Cannot calculate position of marker " + std::to_string(id)
+			+ " with " + std::to_string(markersPerSide) + " markers per side\n";
+		std::exit(1);
 	}
 
 	void draw() const {
@@ -150,12 +207,33 @@ public:
 
 class Robot {
 public:
-	Robot() {}
+	Robot(World* world = nullptr) : m_world(world) {}
 
-	Robot(const Vec3d& size, double fov = 72) {
+	Robot(World* world, const Vec3d& size, double fov = 72) : m_world(world) {
 		m_size = size;
 		m_relCameraPos = { 0, 0 };
 		m_fov = deg2rad(fov);
+
+		m_worldView = World({ 0, 0 }, { 5.75, 5.75 });
+		m_worldView.populateMarkers(worldMarkers, 0.0);
+	}
+
+	Robot(const Robot& other) {
+		m_size = other.m_size;
+		m_relCameraPos = other.m_relCameraPos;
+		m_fov = other.m_fov;
+		m_world = other.m_world;
+		m_worldView = other.m_worldView;
+	}
+
+	Robot& operator=(const Robot& other) {
+		if (this == &other) return *this;
+		m_size = other.m_size;
+		m_relCameraPos = other.m_relCameraPos;
+		m_fov = other.m_fov;
+		m_world = other.m_world;
+		m_worldView = other.m_worldView;
+		return *this;
 	}
 
 	/// <summary>
@@ -206,16 +284,16 @@ public:
 		ofDrawLine(origin.x, origin.y, end2.x, end2.y);
 	}
 
-	std::vector<Marker> see(const World& world) const {
+	std::vector<Marker> see() const {
 		// List of markers visible to the robot
 		std::vector<Marker> visible;
 
 		// Iterate over all markers
-		for (const auto& marker : world.m_markers) {
+		for (const auto& marker : m_world->m_markers) {
 			// Position offsets from marker to robot
 			Vec3d offset(
-				world.m_pos.x + marker.cartesian.x - m_posUnknown.x,
-				world.m_pos.y + marker.cartesian.y - m_posUnknown.y
+				m_world->m_pos.x + marker.cartesian.x - m_posUnknown.x,
+				m_world->m_pos.y + marker.cartesian.y - m_posUnknown.y
 			);
 
 			// Calculate the angles for the field of view -- rayTheta is the angle the FOV makes with the x-axis
@@ -236,12 +314,12 @@ public:
 			if (theta < rayTheta && theta > rayTheta - rayAngle * 2 && offset.dot(Vec3d(cos(rayAngle + m_thetaUnknown), sin(rayAngle + m_thetaUnknown))) > 0) {
 				// Highlight the visible dots
 				ofSetColor(170, 170, 255);
-				ofDrawCircle(world.m_pos.x + marker.cartesian.x, world.m_pos.y + marker.cartesian.y, 15);
+				ofDrawCircle(m_world->m_pos.x + marker.cartesian.x, m_world->m_pos.y + marker.cartesian.y, 15);
 
 				// Label each marker
-				if (world.m_markers.size() / 4 < 20) {
+				if (m_world->m_markers.size() / 4 < 20) {
 					ofSetColor(255);
-					defaultFont.drawString(std::to_string(marker.id), world.m_pos.x + marker.cartesian.x - 30, world.m_pos.y + marker.cartesian.y - 30);
+					defaultFont.drawString(std::to_string(marker.id), m_world->m_pos.x + marker.cartesian.x - 30, m_world->m_pos.y + marker.cartesian.y - 30);
 				}
 
 				// =============================================================================================================
@@ -265,12 +343,60 @@ public:
 		return visible;
 	}
 
+	/// <summary>
+	/// Calculate the position of the robot relative to two markers. This can then be run with
+	/// different combinations of markers to obtain a more precise measurement of the robot's
+	/// position in the box.
+	/// </summary>
+	/// <param name="marker1">= First visible marker (left to right)</param>
+	/// <param name="marker2">= Second visible marker (left to right)</param>
+	/// <returns></returns>
+	Vec3d computeRelativePosition(const Marker& marker1, const Marker& marker2) {
+		// Note: The maths used here was calculated with the "SR-Position-Math.png" on GitHub
+		//       Variables have the same names and perform the same function
+
+		Marker idealMarker1 = m_worldView.idealMarkerPosition(marker1.id);
+		Vec3d M1 = marker1.cartesian;
+		Vec3d M2 = marker2.cartesian;
+
+		// Find X intercept
+		double ma = M1.y / M1.x;
+		double mb = M2.y / M2.x;
+		double xCoord = (ma * M1.x + mb * M2.x - M2.y - M1.y) / (ma - mb);
+		std::cout << "ma: " << ma << " mb: " << mb << " M1x: " << M1.x  << " M1y: " << M1.y << " mb: " << mb << " M2x: " << M2.x  << " M2y: " << M2.y << "\n";
+
+		ofDrawCircle(m_world->m_pos.x + idealMarker1.cartesian.x * metreToPixel + xCoord * metreToPixel, 300, 10);
+
+		return {};
+	}
+
+	/// <summary>
+	/// Calculate the position of the Robot within the bounds of the world, based on
+	/// information from the visible markers
+	/// </summary>
+	Vec3d calculateWorldspacePosition() {
+		// Note: The maths used here was calculated with the "SR-Position-Math.png" on GitHub
+		//       Variables have the same names and perform the same function
+
+		std::vector<Marker> visible = see();
+		if (visible.size() > 1) {
+			Vec3d pos = computeRelativePosition(visible[0], visible[1]);
+		}
+
+		return {};
+	}
+
 	void update() {
 		while (m_thetaUnknown > TWO_PI) m_thetaUnknown -= TWO_PI;
 		while (m_thetaUnknown < 0) m_thetaUnknown += TWO_PI;
 	}
 
 public:
+	// Reference to the World object this Robot is contained in
+	World* m_world;
+
+	World m_worldView;
+
 	/// <summary>
 	/// Width and height of robot
 	/// </summary>
