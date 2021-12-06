@@ -5,7 +5,7 @@
 #include <chrono>
 
 int main() {
-	ofSetupOpenGL(575 + 500, 575 + 100, OF_WINDOW);			// <-------- setup the GL context
+	ofSetupOpenGL(575 + 600, 575 + 200, OF_WINDOW);			// <-------- setup the GL context
 
 	// this kicks off the running of my app
 	// can be OF_WINDOW or OF_FULLSCREEN

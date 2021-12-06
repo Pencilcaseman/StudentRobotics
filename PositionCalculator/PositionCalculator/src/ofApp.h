@@ -20,8 +20,11 @@
 constexpr double pixelToMetre = 0.01; // Actual number of markers +- 2cm (20mm)
 constexpr double metreToPixel = 100;
 
-constexpr int64_t worldMarkers = 28; // Just more markers
-constexpr int64_t markerError = 0.02;
+constexpr int64_t worldMarkers = 12; // Show a few markers for debugging purposes
+constexpr int64_t markerError = 0.00;
+
+// constexpr int64_t worldMarkers = 28; // Just more markers
+// constexpr int64_t markerError = 0.02;
 
 // constexpr int64_t worldMarkers = 100;
 // constexpr int64_t markerError = 0.00;
@@ -261,11 +264,12 @@ public:
 		// Do some rotation + translation and then draw the robot as a rectangle
 		ofPushMatrix();
 		ofTranslate(m_posUnknown.x, m_posUnknown.y);
-		ofRotateRad(m_thetaUnknown - (PI / 2));
+		// ofRotateRad(m_thetaUnknown - (PI / 2));
+		ofRotateRad(m_thetaUnknown);
 		ofDrawRectRounded(-m_size.x / 2, -m_size.y / 2, m_size.x, m_size.x, 10);
 		ofSetColor(0);
-		ofDrawCircle(m_size.x * -0.3, m_size.y * 0.3, 5);
 		ofDrawCircle(m_size.x * 0.3, m_size.y * 0.3, 5);
+		ofDrawCircle(m_size.x * 0.3, m_size.y * -0.3, 5);
 		ofPopMatrix();
 
 		// Find screen-space origin and end-point of ray
@@ -355,17 +359,66 @@ public:
 		// Note: The maths used here was calculated with the "SR-Position-Math.png" on GitHub
 		//       Variables have the same names and perform the same function
 
-		Marker idealMarker1 = m_worldView.idealMarkerPosition(marker1.id);
 		Vec3d M1 = marker1.cartesian;
 		Vec3d M2 = marker2.cartesian;
+		double Md = sqrt((M2.x - M1.x) * (M2.x - M1.x) + (M2.y - M1.y) * (M2.y - M1.y));
+		double invMd = 1.0 / Md; // (M2.x + M1.x);
+		double D1 = M1.mag();
+		double D2 = M2.mag();
+		double alpha = abs(M1.x) > 1E-2 ? atan(M1.y / M1.x) : HALF_PI;
+		double beta = abs(M2.x) > 1E-2 ? atan(M2.y / M2.x) : HALF_PI;
+		double gamma = PI - alpha - beta;
+		double theta = asin(D2 * sin(gamma) * invMd);
+		double mu = asin(D1 * sin(gamma) * invMd);
 
-		// Find X intercept
-		double ma = M1.y / M1.x;
-		double mb = M2.y / M2.x;
-		double xCoord = (ma * M1.x + mb * M2.x - M2.y - M1.y) / (ma - mb);
-		std::cout << "ma: " << ma << " mb: " << mb << " M1x: " << M1.x  << " M1y: " << M1.y << " mb: " << mb << " M2x: " << M2.x  << " M2y: " << M2.y << "\n";
+		// std::cout << "Md: " << Md  << " M1x: " << M1.x << " M1y: " << M1.y << " D1: " << D1 << " D2: " << D2 << " Alpha: " << alpha << " Beta: " << beta << " Gamma: " << gamma << " Theta: " << theta << " Mu: " << mu << "\n";
 
-		ofDrawCircle(m_world->m_pos.x + idealMarker1.cartesian.x * metreToPixel + xCoord * metreToPixel, 300, 10);
+		if (M1.x < 0 && theta < 0) theta *= -1;
+		if (M2.x > 0 && mu < 0) mu *= -1;
+
+		defaultFont.drawString("Theta: " + std::to_string(rad2deg(theta)) + "°\n" +
+			"Mu: " + std::to_string(rad2deg(mu)) + "°", 300, 300);
+
+		Marker worldspaceMarker1 = m_worldView.idealMarkerPosition(marker1.id);
+		Marker worldspaceMarker2 = m_worldView.idealMarkerPosition(marker2.id);
+
+		// Relative position in *world space* to the first marker
+		Vec3d relPosM1 = { D1 * sin(HALF_PI - alpha), D1 * cos(HALF_PI - alpha) };
+		Vec3d worldPos = worldspaceMarker1.cartesian + relPosM1;
+
+		ofDrawCircle(m_world->m_pos.x + worldPos.x * metreToPixel, m_world->m_pos.y - worldPos.y * metreToPixel, 10);
+
+		// =================================================================
+		// Draw a shit-ton of debugging things
+		// =================================================================
+
+		ofPushMatrix();
+		ofTranslate(m_posUnknown.x, m_posUnknown.y);
+		// ofRotateRad(m_thetaUnknown - HALF_PI);
+		ofRotateRad(m_thetaUnknown + HALF_PI);
+
+		// Draw a line going directly up
+		ofSetColor(255, 0, 0);
+		ofDrawLine(0, 0, 0, -100);
+		// Draw a line going directly right
+		ofSetColor(0, 0, 255);
+		ofDrawLine(0, 0, 100, 0);
+
+		ofDrawLine(0, 0, M1.x * metreToPixel, 0);
+		ofDrawLine(M1.x * metreToPixel, 0, M1.x * metreToPixel, -M1.y * metreToPixel);
+		ofDrawLine(0, 0, M1.x * metreToPixel, -M1.y * metreToPixel);
+
+		ofDrawLine(0, 0, M2.x * metreToPixel, 0);
+		ofDrawLine(M2.x * metreToPixel, 0, M2.x * metreToPixel, -M2.y * metreToPixel);
+		ofDrawLine(0, 0, M2.x * metreToPixel, -M2.y * metreToPixel);
+
+		ofSetColor(59, 231, 237);
+		ofDrawCircle(M1.x * metreToPixel, 0, 10);
+		ofDrawCircle(M2.x * metreToPixel, 0, 10);
+		ofDrawCircle(M1.x * metreToPixel, -M1.y * metreToPixel, 10);
+		ofDrawCircle(M2.x * metreToPixel, -M2.y * metreToPixel, 10);
+
+		ofPopMatrix();
 
 		return {};
 	}

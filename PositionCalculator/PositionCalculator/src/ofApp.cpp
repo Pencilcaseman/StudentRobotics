@@ -11,7 +11,7 @@ void ofApp::setup() {
 	if (!defaultFont.load(OF_TTF_SANS, 20))
 		std::cout << "Error loading font. Any text will (most likely) not be rendered\n";
 
-	world = World({ 50, 50 }, { 575, 575 });
+	world = World({ 100, 100 }, { 575, 575 });
 	world.populateMarkers(worldMarkers, markerError);
 
 	srRobot = Robot(&world, Vec3d(50, 50), 90);
