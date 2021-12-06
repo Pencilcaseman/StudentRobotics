@@ -136,11 +136,11 @@ public:
 
 		// Bottom side -- IDs count *down* due to clock-wise ordering -- Increment on X axis
 		for (int64_t i = 0; i < markersPerSide; ++i)
-			m_markers[i + markersPerSide * 2] = Marker(Vec3d{ (i + 1) * markerDist + (metreToPixel * random(-error, error)), m_size.y }, markersPerSide * 3 - i - 1);
+			m_markers[i + markersPerSide * 2] = Marker(Vec3d{ ((markersPerSide - i - 1) + 1) * markerDist + (metreToPixel * random(-error, error)), m_size.y }, i + markersPerSide * 2);
 
 		// Left side -- IDs count *down* due to clock-wise ordering -- Increment on X axis
 		for (int64_t i = 0; i < markersPerSide; ++i)
-			m_markers[i + markersPerSide * 3] = Marker(Vec3d{ 0, (i + 1) * markerDist + (metreToPixel * random(-error, error)) }, markersPerSide * 4 - i - 1);
+			m_markers[i + markersPerSide * 3] = Marker(Vec3d{ 0, ((markersPerSide - i - 1) + 1) * markerDist + (metreToPixel * random(-error, error)) }, i + markersPerSide * 3);
 	}
 
 	Marker idealMarkerPosition(int64_t id) {
@@ -158,13 +158,13 @@ public:
 		}
 
 		if (id < markersPerSide * 3) {
-			// Top of the box
-			return Marker(Vec3d{ (id - markersPerSide * 2 + 1) * markerDist, m_size.y }, id);
+			// Bottom side of the box
+			return Marker(Vec3d{ m_size.x - (id - markersPerSide * 2 + 1) * markerDist, m_size.y }, id);
 		}
 
 		if (id < markersPerSide * 4) {
-			// Top of the box
-			return Marker(Vec3d{ 0, (id - markersPerSide * 3 + 1) * markerDist }, id);
+			// Left side of the box
+			return Marker(Vec3d{ 0, m_size.y - (id - markersPerSide * 3 + 1) * markerDist }, id);
 		}
 
 		std::cout << "Cannot calculate position of marker " + std::to_string(id)
@@ -394,11 +394,24 @@ public:
 		Marker worldspaceMarker1 = m_worldView.idealMarkerPosition(marker1.id);
 		Marker worldspaceMarker2 = m_worldView.idealMarkerPosition(marker2.id);
 
-		// Relative position in *world space* to the first marker
-		Vec3d relPosM1 = { D1 * cos(alpha), D1 * sin(alpha) };
-		Vec3d worldPos = worldspaceMarker1.cartesian + relPosM1;
+		// Calculate the angle between the markers to the horizontal
+		Vec3d markerDiff = worldspaceMarker2.cartesian - worldspaceMarker1.cartesian;
+		double tau = atan2(markerDiff.y, markerDiff.x);
 
-		ofDrawCircle(m_world->m_pos.x + worldPos.x * metreToPixel, m_world->m_pos.y + worldPos.y * metreToPixel, 10);
+		// Relative position in *world space* to the first marker
+		Vec3d relPosM1 = { D1 * cos(theta + tau), D1 * sin(theta + tau) };
+		Vec3d worldPosM1 = worldspaceMarker1.cartesian + relPosM1;
+
+		// Relative position in *world space* to the second marker
+		Vec3d relPosM2 = { D2 * cos(PI - mu + tau), D2 * sin(PI - mu + tau) };
+		Vec3d worldPosM2 = worldspaceMarker2.cartesian + relPosM2;
+
+		Vec3d worldPosTrue;
+
+		if ((worldspaceMarker1.cartesian - worldPosM1).mag2() >= (worldspaceMarker2.cartesian - worldPosM2).mag2())
+			worldPosTrue = worldPosM1;
+		else
+			worldPosTrue = worldPosM2;
 
 		// =================================================================
 		// Draw a shit-ton of debugging things
@@ -431,6 +444,19 @@ public:
 		ofDrawCircle(M2.x * metreToPixel, -M2.y * metreToPixel, 10);
 
 		ofPopMatrix();
+
+		ofSetColor(226, 38, 255);
+		ofDrawLine(m_world->m_pos.x + worldspaceMarker1.cartesian.x * metreToPixel, m_world->m_pos.y + worldspaceMarker1.cartesian.y * metreToPixel,
+			m_world->m_pos.x + worldspaceMarker1.cartesian.x * metreToPixel + 100 * cos(theta + tau), m_world->m_pos.y + worldspaceMarker1.cartesian.y * metreToPixel + 100 * sin(theta + tau));
+		ofDrawCircle(m_world->m_pos.x + worldPosM1.x * metreToPixel, m_world->m_pos.y + worldPosM1.y * metreToPixel, 10);
+
+		ofSetColor(201, 255, 38);
+		ofDrawLine(m_world->m_pos.x + worldspaceMarker2.cartesian.x * metreToPixel, m_world->m_pos.y + worldspaceMarker2.cartesian.y * metreToPixel,
+			m_world->m_pos.x + worldspaceMarker2.cartesian.x * metreToPixel + 100 * cos(PI - mu + tau), m_world->m_pos.y + worldspaceMarker2.cartesian.y * metreToPixel + 100 * sin(PI - mu + tau));
+		ofDrawCircle(m_world->m_pos.x + worldPosM2.x * metreToPixel, m_world->m_pos.y + worldPosM2.y * metreToPixel, 10);
+
+		ofSetColor(255, 38, 38);
+		ofDrawCircle(m_world->m_pos.x + worldPosTrue.x * metreToPixel, m_world->m_pos.y + worldPosTrue.y * metreToPixel, 10);
 
 		return {};
 	}
