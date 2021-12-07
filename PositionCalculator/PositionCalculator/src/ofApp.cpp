@@ -57,10 +57,13 @@ void ofApp::draw() {
 		world.m_pos.y + pos.y * metreToPixel + sin(theta) * 50
 	);
 
-	ofSetColor(255);
-	double thetaDeg = rad2deg(theta);
-	// if (thetaDeg < -180) thetaDeg += 360;
-	defaultFont.drawString("Robot Position	: " + pos.str() + "\nRobot Angle		: " + std::to_string(thetaDeg) + "*", 100, ofGetWindowHeight() - 150);
+	ofSetColor(82, 235, 52);
+	double thetaTrue = rad2deg(srRobot.m_thetaUnknown);
+	if (thetaTrue < -180) thetaTrue += 360;
+	defaultFont.drawString("Robot Position	: " + ((srRobot.m_posUnknown - world.m_pos) * pixelToMetre).str() + "\nRobot Angle		: " + std::to_string(thetaTrue) + "*", 100, ofGetWindowHeight() - 175);
+
+	ofSetColor(235, 217, 52);
+	defaultFont.drawString("Robot Position	: " + pos.str() + "\nRobot Angle		: " + std::to_string(rad2deg(theta)) + "*", 100, ofGetWindowHeight() - 75);
 }
 
 //--------------------------------------------------------------
