@@ -10,6 +10,9 @@
 
 #include "vector.hpp"
 
+// Just some stuff
+static bool drawPositionDebuggingInfo = false;
+
 /**
  * Scale information:
  *
@@ -20,7 +23,7 @@
 constexpr double pixelToMetre = 0.01;
 constexpr double metreToPixel = 100;
 
-// constexpr int64_t worldMarkers = 8; // Show a few markers for debugging purposes
+// constexpr int64_t worldMarkers = 12; // Show a few markers for debugging purposes
 // constexpr double markerError = 0.00;
 
 // constexpr int64_t worldMarkers = 12; // Show a few markers with a large error for debugging purposes
@@ -183,6 +186,10 @@ public:
 		ofDrawLine(m_pos.x + m_size.x - 2.5 * metreToPixel, m_pos.y, m_pos.x + m_size.x, m_pos.y + 2.5 * metreToPixel);
 		ofDrawLine(m_pos.x + m_size.x, m_pos.y + m_size.y - 2.5 * metreToPixel, m_pos.x + m_size.x - 2.5 * metreToPixel, m_pos.y + m_size.y);
 		ofDrawLine(m_pos.x, m_pos.y + m_size.y - 2.5 * metreToPixel, m_pos.x + 2.5 * metreToPixel, m_pos.y + m_size.y);
+
+		// Draw raised section
+		ofSetColor(150, 150, 150);
+		ofDrawRectangle(m_pos.x + m_size.x / 2 - 60, m_pos.y + m_size.y / 2 - 60, 120, 120);
 
 		// Draw starting zones
 		ofSetColor(201, 164, 85);
@@ -358,7 +365,7 @@ public:
 	/// <param name="marker1">= First visible marker (left to right)</param>
 	/// <param name="marker2">= Second visible marker (left to right)</param>
 	/// <returns></returns>
-	Vec3d computeRelativePosition(const Marker& marker1, const Marker& marker2) {
+	std::pair<Vec3d, double> computeRelativePosition(const Marker& marker1, const Marker& marker2) {
 		// Note: The maths used here was calculated with the "SR-Position-Math.png" on GitHub
 		//       Variables have the same names and perform the same function
 
@@ -368,8 +375,8 @@ public:
 		double invMd = 1.0 / Md; // (M2.x + M1.x);
 		double D1 = M1.mag();
 		double D2 = M2.mag();
-		double alpha = abs(M1.x) > 1E-3 ? atan(M1.y / M1.x) : HALF_PI;
-		double beta = abs(M2.x) > 1E-3 ? atan(M2.y / M2.x) : HALF_PI;
+		double alpha = abs(M1.x) > 1E-5 ? atan(M1.y / M1.x) : HALF_PI;
+		double beta = abs(M2.x) > 1E-5 ? atan(M2.y / M2.x) : HALF_PI;
 
 		if (M1.x < 0) alpha += PI;
 		if (M2.x < 0) beta += PI;
@@ -396,8 +403,10 @@ public:
 		Marker worldspaceMarker2 = m_worldView.idealMarkerPosition(marker2.id);
 
 		// Calculate the angle between the markers to the horizontal
-		Vec3d markerDiff = worldspaceMarker2.cartesian - worldspaceMarker1.cartesian;
-		double tau = atan2(markerDiff.y, markerDiff.x);
+		Vec3d markerDiffWorldSpace = worldspaceMarker2.cartesian - worldspaceMarker1.cartesian;
+		Vec3d markerDiffRobotSpace = M2 - M1;
+		double tau = atan2(markerDiffWorldSpace.y, markerDiffWorldSpace.x);
+		double kappa = atan2(markerDiffRobotSpace.y, markerDiffRobotSpace.x);
 
 		// Relative position in *world space* to the first marker
 		Vec3d relPosM1 = { D1 * cos(theta + tau), D1 * sin(theta + tau) };
@@ -414,61 +423,69 @@ public:
 		else
 			worldPosTrue = worldPosM2;
 
-		/*
-		// =================================================================
-		// Draw a shit-ton of debugging things
-		// =================================================================
+		if (drawPositionDebuggingInfo) {
+			// =================================================================
+			// Draw a shit-ton of debugging things
+			// =================================================================
 
-		ofPushMatrix();
-		ofTranslate(m_posUnknown.x, m_posUnknown.y);
-		// ofRotateRad(m_thetaUnknown - HALF_PI);
-		ofRotateRad(m_thetaUnknown + HALF_PI);
+			ofDrawRectangle(m_world->m_pos.x + markerDiffRobotSpace.x * metreToPixel, m_world->m_pos.y + markerDiffRobotSpace.y * metreToPixel, 20, 20);
 
-		// Draw a line going directly up
-		ofSetColor(255, 0, 0);
-		ofDrawLine(0, 0, 0, -100);
-		// Draw a line going directly right
-		ofSetColor(0, 0, 255);
-		ofDrawLine(0, 0, 100, 0);
+			ofPushMatrix();
+			ofTranslate(m_posUnknown.x, m_posUnknown.y);
+			ofRotateRad(m_thetaUnknown + HALF_PI);
 
-		ofDrawLine(0, 0, M1.x * metreToPixel, 0);
-		ofDrawLine(M1.x * metreToPixel, 0, M1.x * metreToPixel, -M1.y * metreToPixel);
-		ofDrawLine(0, 0, M1.x * metreToPixel, -M1.y * metreToPixel);
+			// // Draw a line going directly up
+			// ofSetColor(255, 0, 0);
+			// ofDrawLine(0, 0, 0, -100);
+			// // Draw a line going directly right
+			// ofSetColor(0, 0, 255);
+			// ofDrawLine(0, 0, 100, 0);
 
-		ofDrawLine(0, 0, M2.x * metreToPixel, 0);
-		ofDrawLine(M2.x * metreToPixel, 0, M2.x * metreToPixel, -M2.y * metreToPixel);
-		ofDrawLine(0, 0, M2.x * metreToPixel, -M2.y * metreToPixel);
+			ofSetColor(255, 120, 17);
+			ofDrawLine(0, 0, M1.x * metreToPixel, 0);
+			ofDrawLine(M1.x * metreToPixel, 0, M1.x * metreToPixel, -M1.y * metreToPixel);
+			ofDrawLine(0, 0, M1.x * metreToPixel, -M1.y * metreToPixel);
 
-		ofSetColor(59, 231, 237);
-		ofDrawCircle(M1.x * metreToPixel, 0, 10);
-		ofDrawCircle(M2.x * metreToPixel, 0, 10);
-		ofDrawCircle(M1.x * metreToPixel, -M1.y * metreToPixel, 10);
-		ofDrawCircle(M2.x * metreToPixel, -M2.y * metreToPixel, 10);
+			ofDrawLine(0, 0, M2.x * metreToPixel, 0);
+			ofDrawLine(M2.x * metreToPixel, 0, M2.x * metreToPixel, -M2.y * metreToPixel);
+			ofDrawLine(0, 0, M2.x * metreToPixel, -M2.y * metreToPixel);
 
-		ofPopMatrix();
+			ofSetColor(59, 231, 237);
+			ofDrawCircle(M1.x * metreToPixel, 0, 10);
+			ofDrawCircle(M2.x * metreToPixel, 0, 10);
+			ofDrawCircle(M1.x * metreToPixel, -M1.y * metreToPixel, 10);
+			ofDrawCircle(M2.x * metreToPixel, -M2.y * metreToPixel, 10);
 
-		ofSetColor(226, 38, 255);
-		ofDrawLine(m_world->m_pos.x + worldspaceMarker1.cartesian.x * metreToPixel, m_world->m_pos.y + worldspaceMarker1.cartesian.y * metreToPixel,
-			m_world->m_pos.x + worldspaceMarker1.cartesian.x * metreToPixel + 100 * cos(theta + tau), m_world->m_pos.y + worldspaceMarker1.cartesian.y * metreToPixel + 100 * sin(theta + tau));
-		ofDrawCircle(m_world->m_pos.x + worldPosM1.x * metreToPixel, m_world->m_pos.y + worldPosM1.y * metreToPixel, 10);
+			ofPopMatrix();
 
-		ofSetColor(201, 255, 38);
-		ofDrawLine(m_world->m_pos.x + worldspaceMarker2.cartesian.x * metreToPixel, m_world->m_pos.y + worldspaceMarker2.cartesian.y * metreToPixel,
-			m_world->m_pos.x + worldspaceMarker2.cartesian.x * metreToPixel + 100 * cos(PI - mu + tau), m_world->m_pos.y + worldspaceMarker2.cartesian.y * metreToPixel + 100 * sin(PI - mu + tau));
-		ofDrawCircle(m_world->m_pos.x + worldPosM2.x * metreToPixel, m_world->m_pos.y + worldPosM2.y * metreToPixel, 10);
+			ofSetColor(226, 38, 255);
+			ofDrawLine(m_world->m_pos.x + worldspaceMarker1.cartesian.x * metreToPixel, m_world->m_pos.y + worldspaceMarker1.cartesian.y * metreToPixel,
+				m_world->m_pos.x + worldspaceMarker1.cartesian.x * metreToPixel + 100 * cos(theta + tau), m_world->m_pos.y + worldspaceMarker1.cartesian.y * metreToPixel + 100 * sin(theta + tau));
+			ofDrawCircle(m_world->m_pos.x + worldPosM1.x * metreToPixel, m_world->m_pos.y + worldPosM1.y * metreToPixel, 10);
 
-		ofSetColor(255, 38, 38);
-		ofDrawCircle(m_world->m_pos.x + worldPosTrue.x * metreToPixel, m_world->m_pos.y + worldPosTrue.y * metreToPixel, 10);
-		*/
+			ofSetColor(201, 255, 38);
+			ofDrawLine(m_world->m_pos.x + worldspaceMarker2.cartesian.x * metreToPixel, m_world->m_pos.y + worldspaceMarker2.cartesian.y * metreToPixel,
+				m_world->m_pos.x + worldspaceMarker2.cartesian.x * metreToPixel + 100 * cos(PI - mu + tau), m_world->m_pos.y + worldspaceMarker2.cartesian.y * metreToPixel + 100 * sin(PI - mu + tau));
+			ofDrawCircle(m_world->m_pos.x + worldPosM2.x * metreToPixel, m_world->m_pos.y + worldPosM2.y * metreToPixel, 10);
 
-		return worldPosTrue;
+			ofSetColor(255, 38, 38);
+			ofDrawCircle(m_world->m_pos.x + worldPosTrue.x * metreToPixel, m_world->m_pos.y + worldPosTrue.y * metreToPixel, 10);
+
+			ofSetColor(50, 50, 255);
+			ofDrawLine(m_posUnknown.x, m_posUnknown.y, m_posUnknown.x + 50 * cos(tau + kappa - HALF_PI), m_posUnknown.y - 50 * sin(tau + kappa - HALF_PI));
+
+			defaultFont.drawString(std::to_string(rad2deg(tau)) + "\n" + std::to_string(rad2deg(tau + kappa)), 500, 500);
+		}
+
+		return { worldPosTrue, tau + kappa - HALF_PI };
 	}
 
 	/// <summary>
 	/// Calculate the position of the Robot within the bounds of the world, based on
-	/// information from the visible markers
+	/// information from the visible markers. Also calculate the angle of the robot
+	/// relative to the world (in radians)
 	/// </summary>
-	Vec3d calculateWorldspacePosition() {
+	std::pair<Vec3d, double> calculateWorldspacePosition() {
 		// Note: The maths used here was calculated with the "SR-Position-Math.png" on GitHub
 		//       Variables have the same names and perform the same function
 
@@ -476,10 +493,17 @@ public:
 		if (visible.size() == 0) return {};
 
 		Vec3d sumPos;
+		double theta = 0;
 		for (int64_t i = 0; i < visible.size() - 1; ++i)
-			sumPos += computeRelativePosition(visible[i], visible[i + 1]);
+		{
+			auto triPos = computeRelativePosition(visible[i], visible[i + 1]);
+			sumPos += triPos.first;
+			// theta += triPos.second;
+			theta = triPos.second;
+		}
 
-		return sumPos / ((double)visible.size() - 1);
+		// return { sumPos / ((double)visible.size() - 1), theta / (double) visible.size() };
+		return { sumPos / ((double)visible.size() - 1), theta < -PI ? theta + TWO_PI : theta };
 	}
 
 	void update() {

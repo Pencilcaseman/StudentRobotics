@@ -16,7 +16,7 @@ void ofApp::setup() {
 
 	srRobot = Robot(&world, Vec3d(50, 50), 72);
 	// srRobot.setPosUnknown({ world.m_pos.x + 0.5 * metreToPixel, world.m_pos.y + 0.5 * metreToPixel }, PI / 4);
-	srRobot.setPosUnknown({ world.m_pos.x + 0.5 * metreToPixel, world.m_pos.y + 0.5 * metreToPixel }, -PI/2);
+	srRobot.setPosUnknown({ world.m_pos.x + 0.5 * metreToPixel, world.m_pos.y + 0.5 * metreToPixel }, -PI / 2);
 }
 
 //--------------------------------------------------------------
@@ -45,16 +45,28 @@ void ofApp::draw() {
 		yOffset += 30;
 	}
 
-	auto pos = srRobot.calculateWorldspacePosition();
+	auto location = srRobot.calculateWorldspacePosition();
+	Vec3d pos = location.first;
+	double theta = location.second;
 	ofSetColor(255, 38, 20);
 	ofDrawCircle(world.m_pos.x + pos.x * metreToPixel, world.m_pos.y + pos.y * metreToPixel, 10);
+	ofDrawLine(
+		world.m_pos.x + pos.x * metreToPixel,
+		world.m_pos.y + pos.y * metreToPixel,
+		world.m_pos.x + pos.x * metreToPixel + cos(theta) * 50,
+		world.m_pos.y + pos.y * metreToPixel + sin(theta) * 50
+	);
 
-	srRobot.m_thetaUnknown += 0.05;
+	ofSetColor(255);
+	double thetaDeg = rad2deg(theta);
+	// if (thetaDeg < -180) thetaDeg += 360;
+	defaultFont.drawString("Robot Position	: " + pos.str() + "\nRobot Angle		: " + std::to_string(thetaDeg) + "*", 100, ofGetWindowHeight() - 150);
 }
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key) {
 	if (key == OF_KEY_CONTROL) robotPointToMouse = true;
+	if (key == ' ') drawPositionDebuggingInfo ^= true;
 }
 
 //--------------------------------------------------------------
