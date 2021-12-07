@@ -17,20 +17,23 @@
  * and the rendered board is 575 pixels square
  */
 
-constexpr double pixelToMetre = 0.01; // Actual number of markers +- 2cm (20mm)
+constexpr double pixelToMetre = 0.01;
 constexpr double metreToPixel = 100;
 
-constexpr int64_t worldMarkers = 8; // Show a few markers for debugging purposes
-constexpr int64_t markerError = 0.00;
+// constexpr int64_t worldMarkers = 8; // Show a few markers for debugging purposes
+// constexpr double markerError = 0.00;
 
-// constexpr int64_t worldMarkers = 28; // Just more markers
-// constexpr int64_t markerError = 0.02;
+// constexpr int64_t worldMarkers = 12; // Show a few markers with a large error for debugging purposes
+// constexpr double markerError = 0.5;
 
-// constexpr int64_t worldMarkers = 100;
-// constexpr int64_t markerError = 0.00;
+constexpr int64_t worldMarkers = 28; // Actual number of markers +- 2cm (20mm)
+constexpr double markerError = 0.02;
+
+// constexpr int64_t worldMarkers = 100; // More markers for debugging purposes
+// constexpr double markerError = 0.00;
 
 // constexpr int64_t worldMarkers = 10000; // LOADS of markers to make sure stuff works
-// constexpr int64_t markerError = 0.00;
+// constexpr double markerError = 0.00;
 
 static ofTrueTypeFont defaultFont;
 
@@ -367,8 +370,6 @@ public:
 		double D2 = M2.mag();
 		double alpha = abs(M1.x) > 1E-3 ? atan(M1.y / M1.x) : HALF_PI;
 		double beta = abs(M2.x) > 1E-3 ? atan(M2.y / M2.x) : HALF_PI;
-		double alphaTmp = alpha;
-		double betaTmp = beta;
 
 		if (M1.x < 0) alpha += PI;
 		if (M2.x < 0) beta += PI;
@@ -384,12 +385,12 @@ public:
 		// if (M1.x > 0) theta = PI - theta;
 		// if (M2.x > 0 && mu < 0) mu *= -1;
 
-		defaultFont.drawString("Alpha: " + std::to_string(rad2deg(alpha)) + "°\n" +
-			"Beta: " + std::to_string(rad2deg(beta)) + "°\n" +
-			"Theta: " + std::to_string(rad2deg(theta)) + "°\n" +
-			"Gamma: " + std::to_string(rad2deg(gamma)) + "°\n" +
-			"Mu: " + std::to_string(rad2deg(mu)) + "°\n" +
-			"sin(theta): " + std::to_string(D2 * sin(gamma) * invMd), 300, 500);
+		// defaultFont.drawString("Alpha: " + std::to_string(rad2deg(alpha)) + "°\n" +
+		// 	"Beta: " + std::to_string(rad2deg(beta)) + "°\n" +
+		// 	"Theta: " + std::to_string(rad2deg(theta)) + "°\n" +
+		// 	"Gamma: " + std::to_string(rad2deg(gamma)) + "°\n" +
+		// 	"Mu: " + std::to_string(rad2deg(mu)) + "°\n" +
+		// 	"sin(theta): " + std::to_string(D2 * sin(gamma) * invMd), 300, 500);
 
 		Marker worldspaceMarker1 = m_worldView.idealMarkerPosition(marker1.id);
 		Marker worldspaceMarker2 = m_worldView.idealMarkerPosition(marker2.id);
@@ -413,6 +414,7 @@ public:
 		else
 			worldPosTrue = worldPosM2;
 
+		/*
 		// =================================================================
 		// Draw a shit-ton of debugging things
 		// =================================================================
@@ -457,8 +459,9 @@ public:
 
 		ofSetColor(255, 38, 38);
 		ofDrawCircle(m_world->m_pos.x + worldPosTrue.x * metreToPixel, m_world->m_pos.y + worldPosTrue.y * metreToPixel, 10);
+		*/
 
-		return {};
+		return worldPosTrue;
 	}
 
 	/// <summary>
@@ -470,11 +473,13 @@ public:
 		//       Variables have the same names and perform the same function
 
 		std::vector<Marker> visible = see();
-		if (visible.size() > 1) {
-			Vec3d pos = computeRelativePosition(visible[0], visible[1]);
-		}
+		if (visible.size() == 0) return {};
 
-		return {};
+		Vec3d sumPos;
+		for (int64_t i = 0; i < visible.size() - 1; ++i)
+			sumPos += computeRelativePosition(visible[i], visible[i + 1]);
+
+		return sumPos / ((double)visible.size() - 1);
 	}
 
 	void update() {

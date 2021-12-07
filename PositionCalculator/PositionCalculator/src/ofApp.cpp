@@ -14,7 +14,7 @@ void ofApp::setup() {
 	world = World({ 100, 100 }, { 575, 575 });
 	world.populateMarkers(worldMarkers, markerError);
 
-	srRobot = Robot(&world, Vec3d(50, 50), 90);
+	srRobot = Robot(&world, Vec3d(50, 50), 72);
 	// srRobot.setPosUnknown({ world.m_pos.x + 0.5 * metreToPixel, world.m_pos.y + 0.5 * metreToPixel }, PI / 4);
 	srRobot.setPosUnknown({ world.m_pos.x + 0.5 * metreToPixel, world.m_pos.y + 0.5 * metreToPixel }, -PI/2);
 }
@@ -45,7 +45,11 @@ void ofApp::draw() {
 		yOffset += 30;
 	}
 
-	srRobot.calculateWorldspacePosition();
+	auto pos = srRobot.calculateWorldspacePosition();
+	ofSetColor(255, 38, 20);
+	ofDrawCircle(world.m_pos.x + pos.x * metreToPixel, world.m_pos.y + pos.y * metreToPixel, 10);
+
+	srRobot.m_thetaUnknown += 0.05;
 }
 
 //--------------------------------------------------------------

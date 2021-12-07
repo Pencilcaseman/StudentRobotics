@@ -107,6 +107,56 @@ public:
 		return res;
 	}
 
+
+
+	template<typename T, typename std::enable_if<dims != (int64_t)3, int>::type = 0>
+	Vec<DTYPE, dims>& operator+=(const Vec<T, dims>& other) const {
+		for (int64_t i = 0; i < dims; ++i) m_components[i] += other[i];
+		return *this;
+	}
+
+	template<typename T, typename std::enable_if<dims != (int64_t)3, int>::type = 0>
+	Vec<DTYPE, dims>& operator-=(const Vec<T, dims>& other) const {
+		for (int64_t i = 0; i < dims; ++i) m_components[i] -= other[i];
+		return *this;
+	}
+
+	template<typename T, typename std::enable_if<dims != (int64_t)3, int>::type = 0>
+	Vec<DTYPE, dims>& operator*=(const Vec<T, dims>& other) const {
+		for (int64_t i = 0; i < dims; ++i) m_components[i] *= other[i];
+		return *this;
+	}
+
+	template<typename T, typename std::enable_if<dims != (int64_t)3, int>::type = 0>
+	Vec<DTYPE, dims>& operator/=(const Vec<T, dims>& other) const {
+		for (int64_t i = 0; i < dims; ++i) m_components[i] /= other[i];
+		return *this;
+	}
+
+	template<typename T, typename std::enable_if<dims != (int64_t)3, int>::type = 0>
+	Vec<DTYPE, dims>& operator+=(const T& other) const {
+		for (int64_t i = 0; i < dims; ++i) m_components[i] += other;
+		return *this;
+	}
+
+	template<typename T, typename std::enable_if<dims != (int64_t)3, int>::type = 0>
+	Vec<DTYPE, dims>& operator-=(const T& other) const {
+		for (int64_t i = 0; i < dims; ++i) m_components[i] -= other;
+		return *this;
+	}
+
+	template<typename T, typename std::enable_if<dims != (int64_t)3, int>::type = 0>
+	Vec<DTYPE, dims>& operator*=(const T& other) const {
+		for (int64_t i = 0; i < dims; ++i) m_components[i] *= other;
+		return *this;
+	}
+
+	template<typename T, typename std::enable_if<dims != (int64_t)3, int>::type = 0>
+	Vec<DTYPE, dims>& operator/=(const T& other) const {
+		for (int64_t i = 0; i < dims; ++i) m_components[i] /= other;
+		return *this;
+	}
+
 	/**
 	 * Return the magnitude squared of a vector
 	 */
@@ -274,6 +324,7 @@ public:
 		return Vec<Common<T>, 3>(x / other.x, y / other.y, z / other.z);
 	}
 
+
 	/**
 	 * Implement simple arithmetic operators + - * /
 	 *
@@ -299,6 +350,74 @@ public:
 	template<typename T>
 	Vec<Common<T>, 3> operator/(const T& other) const {
 		return Vec<Common<T>, 3>(x / other, y / other, z / other);
+	}
+
+
+
+
+	template<typename T>
+	Vec<DTYPE, 3>& operator+=(const Vec<T, 3>& other) {
+		x += other.x;
+		y += other.y;
+		z += other.z;
+		return *this;
+	}
+
+	template<typename T>
+	Vec<DTYPE, 3>& operator-=(const Vec<T, 3>& other) {
+		x -= other.x;
+		y -= other.y;
+		z -= other.z;
+		return *this;
+	}
+
+	template<typename T>
+	Vec<DTYPE, 3>& operator*=(const Vec<T, 3>& other) {
+		x *= other.x;
+		y *= other.y;
+		z *= other.z;
+		return *this;
+	}
+
+	template<typename T>
+	Vec<DTYPE, 3>& operator/=(const Vec<T, 3>& other) {
+		x /= other.x;
+		y /= other.y;
+		z /= other.z;
+		return *this;
+	}
+
+
+	template<typename T>
+	Vec<DTYPE, 3>& operator+=(const T& other) {
+		x += other;
+		y += other;
+		z += other;
+		return *this;
+	}
+
+	template<typename T>
+	Vec<DTYPE, 3>& operator-=(const T& other) {
+		x -= other;
+		y -= other;
+		z -= other;
+		return *this;
+	}
+
+	template<typename T>
+	Vec<DTYPE, 3>& operator*=(const T& other) {
+		x *= other;
+		y *= other;
+		z *= other;
+		return *this;
+	}
+
+	template<typename T>
+	Vec<DTYPE, 3>& operator/=(const T& other) {
+		x /= other;
+		y /= other;
+		z /= other;
+		return *this;
 	}
 
 	/**
