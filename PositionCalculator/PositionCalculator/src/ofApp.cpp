@@ -64,12 +64,15 @@ void ofApp::draw() {
 
 	ofSetColor(235, 217, 52);
 	defaultFont.drawString("Robot Position	: " + pos.str() + "\nRobot Angle		: " + std::to_string(rad2deg(theta)) + "*", 100, ofGetWindowHeight() - 75);
+
+	srRobot.projectedIntersection();
 }
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key) {
 	if (key == OF_KEY_CONTROL) robotPointToMouse = true;
-	if (key == ' ') drawPositionDebuggingInfo ^= true;
+	if (key == ' ') showPositionDebugInfo ^= true;
+	if (key == 'r') showRaycastDebugInfo ^= true;
 }
 
 //--------------------------------------------------------------

@@ -11,7 +11,8 @@
 #include "vector.hpp"
 
 // Just some stuff
-static bool drawPositionDebuggingInfo = false;
+static bool showPositionDebugInfo = false;
+static bool showRaycastDebugInfo = false;
 
 /**
  * Scale information:
@@ -78,6 +79,73 @@ inline double random(double min, double max) {
 	std::uniform_real_distribution<double> dist(min, max);
 	return dist(generator);
 }
+
+class Line {
+public:
+	Line(Vec3d start, Vec3d end) : start(start), end(end) {}
+
+	std::pair<bool, Vec3d> intersects(const Line& other) const {
+		/*
+			y=m1(x-x1)+y1
+			y=m2(x-x2)+y2
+
+			m1(x-x1)+y1 = m2(x-x2)+y2
+
+			m1(x-x1) - m2(x-x2) = y2 - y1
+
+			m1*x - m1*x1 - m2 * x + m2*x2 = y2 - y1
+
+			m1*x - m2*x = y2 - y1 + m1*x1 - m2*x2
+
+			x(m1 - m2) = y2 - y1 + m1*x1 - m2*x2
+
+			=========================================
+			x = (y2 - y1 + m1*x1 - m2*x2) / (m1 - m2)
+			y = m1(x-x1)+y1
+			=========================================
+		*/
+
+		double m1 = (end.y - start.y) / (end.x - start.x);
+		double m2 = (other.end.y - other.start.y) / (other.end.x - other.start.x);
+		double x1 = start.x, y1 = start.y;
+		double x2 = other.start.x, y2 = other.start.y;
+
+		double xIntersect, yIntersect;
+
+		// Check for edge cases
+		if (abs(end.x - start.x) < 1E-5) {
+			// Infinite gradient. X intersect is x1
+			xIntersect = x1;
+			yIntersect = m2 * (xIntersect - x2) + y2;
+		}
+		else if (abs(other.end.x - other.start.x) < 1E-5) {
+			// Infinite gradient. X intersect is x2
+			xIntersect = x2;
+			yIntersect = m1 * (xIntersect - x1) + y1;
+		}
+		else {
+			xIntersect = (y2 - y1 + m1 * x1 - m2 * x2) / (m1 - m2);
+			yIntersect = m1 * (xIntersect - x1) + y1;
+		}
+
+		double epsilon = 1E-8;
+
+		return {
+			xIntersect > min(start.x, end.x) - epsilon &&
+			xIntersect < max(start.x, end.x) + epsilon &&
+			yIntersect > min(start.y, end.y) - epsilon &&
+			yIntersect < max(start.y, end.y) + epsilon &&
+			xIntersect > min(other.start.x, other.end.x) - epsilon &&
+			xIntersect < max(other.start.x, other.end.x) + epsilon &&
+			yIntersect > min(other.start.y, other.end.y) - epsilon &&
+			yIntersect < max(other.start.y, other.end.y) + epsilon,
+			Vec3d{xIntersect, yIntersect} };
+	}
+
+public:
+	Vec3d start;
+	Vec3d end;
+};
 
 class Marker {
 public:
@@ -149,7 +217,7 @@ public:
 			m_markers[i + markersPerSide * 3] = Marker(Vec3d{ 0, ((markersPerSide - i - 1) + 1) * markerDist + (metreToPixel * random(-error, error)) }, i + markersPerSide * 3);
 	}
 
-	Marker idealMarkerPosition(int64_t id) {
+	Marker idealMarkerPosition(int64_t id) const {
 		int64_t markersPerSide = m_markers.size() / 4;
 		double markerDist = m_size.x / (double)(markersPerSide + 1);
 
@@ -365,7 +433,7 @@ public:
 	/// <param name="marker1">= First visible marker (left to right)</param>
 	/// <param name="marker2">= Second visible marker (left to right)</param>
 	/// <returns></returns>
-	std::pair<Vec3d, double> computeRelativePosition(const Marker& marker1, const Marker& marker2) {
+	std::pair<Vec3d, double> computeRelativePosition(const Marker& marker1, const Marker& marker2) const {
 		// Note: The maths used here was calculated with the "SR-Position-Math.png" on GitHub
 		//       Variables have the same names and perform the same function
 
@@ -392,11 +460,11 @@ public:
 		// if (M1.x > 0) theta = PI - theta;
 		// if (M2.x > 0 && mu < 0) mu *= -1;
 
-		// defaultFont.drawString("Alpha: " + std::to_string(rad2deg(alpha)) + "°\n" +
-		// 	"Beta: " + std::to_string(rad2deg(beta)) + "°\n" +
-		// 	"Theta: " + std::to_string(rad2deg(theta)) + "°\n" +
-		// 	"Gamma: " + std::to_string(rad2deg(gamma)) + "°\n" +
-		// 	"Mu: " + std::to_string(rad2deg(mu)) + "°\n" +
+		// defaultFont.drawString("Alpha: " + std::to_string(rad2deg(alpha)) + "ï¿½\n" +
+		// 	"Beta: " + std::to_string(rad2deg(beta)) + "ï¿½\n" +
+		// 	"Theta: " + std::to_string(rad2deg(theta)) + "ï¿½\n" +
+		// 	"Gamma: " + std::to_string(rad2deg(gamma)) + "ï¿½\n" +
+		// 	"Mu: " + std::to_string(rad2deg(mu)) + "ï¿½\n" +
 		// 	"sin(theta): " + std::to_string(D2 * sin(gamma) * invMd), 300, 500);
 
 		Marker worldspaceMarker1 = m_worldView.idealMarkerPosition(marker1.id);
@@ -423,7 +491,7 @@ public:
 		else
 			worldPosTrue = worldPosM2;
 
-		if (drawPositionDebuggingInfo) {
+		if (showPositionDebugInfo) {
 			// =================================================================
 			// Draw a shit-ton of debugging things
 			// =================================================================
@@ -485,7 +553,7 @@ public:
 	/// information from the visible markers. Also calculate the angle of the robot
 	/// relative to the world (in radians)
 	/// </summary>
-	std::pair<Vec3d, double> calculateWorldspacePosition() {
+	std::pair<Vec3d, double> calculateWorldspacePosition() const {
 		// Note: The maths used here was calculated with the "SR-Position-Math.png" on GitHub
 		//       Variables have the same names and perform the same function
 
@@ -504,6 +572,55 @@ public:
 
 		// return { sumPos / ((double)visible.size() - 1), theta / (double) visible.size() };
 		return { sumPos / ((double)visible.size() - 1), theta < -PI ? theta + TWO_PI : theta };
+	}
+
+	/// <summary>
+	/// Return the distance to the nearest wall or world-space object
+	/// </summary>
+	/// <returns></returns>
+	Vec3d projectedIntersection() const {
+		std::pair<Vec3d, double> position = calculateWorldspacePosition();
+		Line robotLine({ position.first.x, position.first.y }, 4 * Vec3d{ cos(position.second), sin(position.second) } + Vec3d{ position.first.x, position.first.y });
+
+		std::vector<std::pair<bool, Vec3d>> intersections = {
+			robotLine.intersects(boxEdge0),
+			robotLine.intersects(boxEdge1),
+			robotLine.intersects(boxEdge2),
+			robotLine.intersects(boxEdge3),
+			robotLine.intersects(raisedEdge0),
+			robotLine.intersects(raisedEdge1),
+			robotLine.intersects(raisedEdge2),
+			robotLine.intersects(raisedEdge3)
+		};
+
+		double minMag = 1E100;
+		Vec3d intersection;
+		for (const auto& hit : intersections) {
+			if (hit.first && showRaycastDebugInfo) {
+				ofSetColor(122, 120, 35);
+				ofDrawCircle(m_world->m_pos.x + hit.second.x * metreToPixel, m_world->m_pos.y + hit.second.y * metreToPixel, 10);
+			}
+
+			if (hit.first && (position.first - hit.second).mag2() < minMag) {
+				minMag = (position.first - hit.second).mag2();
+				intersection = hit.second;
+			}
+		}
+
+		if (showRaycastDebugInfo) {
+			ofSetColor(3, 82, 252);
+			for (const auto& edge : { robotLine, boxEdge0, boxEdge1, boxEdge2, boxEdge3, raisedEdge0, raisedEdge1, raisedEdge2, raisedEdge3 }) {
+				ofDrawLine(m_world->m_pos.x + edge.start.x * metreToPixel, m_world->m_pos.y + edge.start.y * metreToPixel,
+					m_world->m_pos.x + edge.end.x * metreToPixel, m_world->m_pos.y + edge.end.y * metreToPixel);
+			}
+
+			ofSetColor(242, 242, 39);
+			ofDrawCircle(m_world->m_pos.x + intersection.x * metreToPixel, m_world->m_pos.y + intersection.y * metreToPixel, 10);
+		}
+
+
+
+		return intersection;
 	}
 
 	void update() {
@@ -536,4 +653,15 @@ public:
 	/// </summary>
 	Vec3d m_posUnknown;
 	double m_thetaUnknown = 0;
+
+	// Hard-coded stuff for performance improvements
+	const Line boxEdge0 = Line({ 0, 0 }, { 5.75, 0 }); // Top edge of box
+	const Line boxEdge1 = Line({ 5.75, 0 }, { 5.75, 5.75 }); // Right edge of box
+	const Line boxEdge2 = Line({ 0, 5.75 }, { 5.75, 5.75 }); // Bottom edge of box
+	const Line boxEdge3 = Line({ 0, 0 }, { 0, 5.75 }); // Left edge of box
+
+	const Line raisedEdge0 = Line({ 5.75 / 2 - 0.60, 5.75 / 2 - 0.60 }, { 5.75 / 2 + 0.60, 5.75 / 2 - 0.60 }); // Top edge of raised area
+	const Line raisedEdge1 = Line({ 5.75 / 2 + 0.60, 5.75 / 2 - 0.60 }, { 5.75 / 2 + 0.60, 5.75 / 2 + 0.60 }); // Right edge of raised area
+	const Line raisedEdge2 = Line({ 5.75 / 2 - 0.60, 5.75 / 2 + 0.60 }, { 5.75 / 2 + 0.60, 5.75 / 2 + 0.60 }); // Bottom edge of raised area
+	const Line raisedEdge3 = Line({ 5.75 / 2 - 0.60, 5.75 / 2 - 0.60 }, { 5.75 / 2 - 0.60, 5.75 / 2 + 0.60 }); // Left edge of raised area
 };

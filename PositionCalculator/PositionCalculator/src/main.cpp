@@ -16,6 +16,11 @@ int main() {
 	// Ignore stuff below here. This is just me testing stuff //
 	//========================================================//
 
+	Line a({ 0, -2 }, { 10, 8 });
+	Line b({ 2, -3 }, { 10, 13 });
+	std::cout << a.intersects(b).first << "\n";
+	std::cout << a.intersects(b).second.str() << "\n";
+
 	// uint64_t iters = 13954300;
 	// {
 	// 	auto a = Vec3d(1 + 1E-12, 1 + 1E-12, 1 + 1E-12);
