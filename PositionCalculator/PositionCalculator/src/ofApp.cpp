@@ -11,7 +11,7 @@ void ofApp::setup() {
 	if (!defaultFont.load(OF_TTF_SANS, 20))
 		std::cout << "Error loading font. Any text will (most likely) not be rendered\n";
 
-	world = World({ 100, 100 }, { 575, 575 });
+	world = World({ 100, 100 }, { 5.75, 5.75 });
 	world.populateMarkers(worldMarkers, markerError);
 
 	srRobot = Robot(&world, Vec3d(50, 50), 72);
@@ -19,7 +19,7 @@ void ofApp::setup() {
 	srRobot.setPosUnknown({ world.m_pos.x + 0.5 * metreToPixel, world.m_pos.y + 0.5 * metreToPixel }, -PI / 2);
 
 	// Add a single can to the world
-	world.addCan(Can({ 200, 200 }, false));
+	world.addCan(Can({ 2.0, 2.0 }, false, 0.067));
 }
 
 //--------------------------------------------------------------
@@ -68,7 +68,13 @@ void ofApp::draw() {
 	ofSetColor(235, 217, 52);
 	defaultFont.drawString("Robot Position	: " + pos.str() + "\nRobot Angle		: " + std::to_string(rad2deg(theta)) + "*", 100, ofGetWindowHeight() - 75);
 
-	srRobot.projectedIntersection();
+	// world.distanceSensor((srRobot.m_posUnknown - world.m_pos) * pixelToMetre, srRobot.m_thetaUnknown);
+	// srRobot.projectedIntersection();
+
+	if (srRobot.lookingAtCan()) {
+		ofSetColor(113, 252, 43);
+		ofDrawCircle(world.m_pos.x + world.m_size.x * metreToPixel / 2, world.m_pos.y + world.m_size.y * metreToPixel / 2, 25);
+	}
 }
 
 //--------------------------------------------------------------

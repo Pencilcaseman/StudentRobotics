@@ -147,15 +147,39 @@ public:
 	Vec3d end;
 };
 
+// Hard-coded stuff for performance improvements
+const Line boxEdge0 = Line({ 0, 0 }, { 5.75, 0 }); // Top edge of box
+const Line boxEdge1 = Line({ 5.75, 0 }, { 5.75, 5.75 }); // Right edge of box
+const Line boxEdge2 = Line({ 0, 5.75 }, { 5.75, 5.75 }); // Bottom edge of box
+const Line boxEdge3 = Line({ 0, 0 }, { 0, 5.75 }); // Left edge of box
+
+const Line raisedEdge0 = Line(
+	{ 5.75 / 2 - 0.60, 5.75 / 2 - 0.60 },
+	{ 5.75 / 2 + 0.60, 5.75 / 2 - 0.60 }); // Top edge of raised area
+
+const Line raisedEdge1 = Line(
+	{ 5.75 / 2 + 0.60, 5.75 / 2 - 0.60 },
+	{ 5.75 / 2 + 0.60, 5.75 / 2 + 0.60 }); // Right edge of raised area
+
+const Line raisedEdge2 = Line(
+	{ 5.75 / 2 - 0.60, 5.75 / 2 + 0.60 },
+	{ 5.75 / 2 + 0.60, 5.75 / 2 + 0.60 }); // Bottom edge of raised area
+
+const Line raisedEdge3 = Line(
+	{ 5.75 / 2 - 0.60, 5.75 / 2 - 0.60 },
+	{ 5.75 / 2 - 0.60, 5.75 / 2 + 0.60 }); // Left edge of raised area
+
 class Marker {
 public:
 	// NOTE: Some information is not stored. This is to make the program simpler
 
 	Marker() : id(-1), distance(-1), cartesian({ 0, 0 }) {}
 
-	Marker(Vec3d cartesian, int64_t id = -1) : cartesian(cartesian), distance(cartesian.mag()), id(id) {}
+	Marker(Vec3d cartesian, int64_t id = -1)
+		: cartesian(cartesian), distance(cartesian.mag()), id(id) {}
 
-	Marker(const Marker& other) : id(other.id), distance(other.distance), cartesian(other.cartesian) {}
+	Marker(const Marker& other)
+		: id(other.id), distance(other.distance), cartesian(other.cartesian) {}
 
 	Marker& operator=(const Marker& other) {
 		id = other.id;
@@ -172,9 +196,11 @@ public:
 class Can : public Marker {
 public:
 	Can() : Marker() {}
-	Can(Vec3d cartesian, bool upright = true) : Marker(cartesian), upright(upright) {}
+	Can(Vec3d cartesian, bool upright = true, double radius = 1)
+		: Marker(cartesian), upright(upright), radius(radius) {}
 
-	bool upright;
+	bool upright = true;
+	double radius = 1;
 };
 
 class World {
@@ -207,22 +233,31 @@ public:
 		m_markers = std::vector<Marker>(numMarkers);
 		int64_t markersPerSide = numMarkers / 4;
 		double markerDist = m_size.x / (double)(markersPerSide + 1);
-
 		// Top side -- IDs count up -- Increment on X axis
 		for (int64_t i = 0; i < markersPerSide; ++i)
-			m_markers[i] = Marker(Vec3d{ (i + 1) * markerDist + (metreToPixel * random(-error, error)), 0 }, i);
+			m_markers[i] = Marker(Vec3d{ (i + 1) * markerDist + random(-error, error), 0 }, i);
 
 		// Right side -- IDs count up -- Increment on Y axis
 		for (int64_t i = 0; i < markersPerSide; ++i)
-			m_markers[i + markersPerSide] = Marker(Vec3d{ m_size.x, (i + 1) * markerDist + (metreToPixel * random(-error, error)) }, i + markersPerSide);
+			m_markers[i + markersPerSide] = Marker(
+				Vec3d{ m_size.x, (i + 1) * markerDist + random(-error, error) },
+				i + markersPerSide
+			);
 
 		// Bottom side -- IDs count *down* due to clock-wise ordering -- Increment on X axis
 		for (int64_t i = 0; i < markersPerSide; ++i)
-			m_markers[i + markersPerSide * 2] = Marker(Vec3d{ ((markersPerSide - i - 1) + 1) * markerDist + (metreToPixel * random(-error, error)), m_size.y }, i + markersPerSide * 2);
+			m_markers[i + markersPerSide * 2] = Marker(
+				Vec3d{ ((markersPerSide - i - 1) + 1) * markerDist + random(-error, error), m_size.y },
+				i + markersPerSide * 2
+			);
 
 		// Left side -- IDs count *down* due to clock-wise ordering -- Increment on X axis
 		for (int64_t i = 0; i < markersPerSide; ++i)
-			m_markers[i + markersPerSide * 3] = Marker(Vec3d{ 0, ((markersPerSide - i - 1) + 1) * markerDist + (metreToPixel * random(-error, error)) }, i + markersPerSide * 3);
+			m_markers[i + markersPerSide * 3] = Marker(
+				Vec3d{ 0, ((markersPerSide - i - 1) + 1) * markerDist + random(-error, error) },
+				i + markersPerSide * 3
+			);
+
 	}
 
 	Marker idealMarkerPosition(int64_t id) const {
@@ -254,6 +289,96 @@ public:
 		std::exit(1);
 	}
 
+	/// <summary>
+	/// Return the distance to the nearest wall or world-space object
+	/// </summary>
+	/// <returns></returns>
+	double distanceSensor(Vec3d position, double theta) const {
+		Line sensorLine(position, 4 * Vec3d{ cos(theta), sin(theta) } + position);
+
+		std::vector<std::pair<bool, Vec3d>> intersections = {
+			sensorLine.intersects(boxEdge0),
+			sensorLine.intersects(boxEdge1),
+			sensorLine.intersects(boxEdge2),
+			sensorLine.intersects(boxEdge3),
+			sensorLine.intersects(raisedEdge0),
+			sensorLine.intersects(raisedEdge1),
+			sensorLine.intersects(raisedEdge2),
+			sensorLine.intersects(raisedEdge3)
+		};
+
+		// Add any can intersections to the list of intersections
+		// Interactive for this available here: https://www.desmos.com/calculator/yzqi2u5gmf
+		for (const auto& can : m_cans) {
+			Vec3d p1 = position;
+			Vec3d p2 = position + 4 * Vec3d{ cos(theta), sin(theta) };
+
+			// double m = (position.y - can.cartesian.y) / (position.x - can.cartesian.x);
+			double m = (p2.y - p1.y) / (p2.x - p1.x);
+			double mn = -1. / m;
+			double intersectX, intersectY;
+			if (abs(p2.x - p1.x) < 1E-5) {
+				intersectX = p1.x;
+				intersectY = can.cartesian.y;
+			}
+			else {
+				intersectX = (m * p1.x - mn * can.cartesian.x + can.cartesian.y - p1.y) / (m - mn);
+				intersectY = m * (intersectX - p1.x) + p1.y;
+			}
+			Vec3d relative = { can.cartesian.x - intersectX, can.cartesian.y - intersectY };
+			if (relative.mag2() < can.radius * can.radius &&
+				can.cartesian.x > min(p1.x, p2.x) &&
+				can.cartesian.x < max(p1.x, p2.x) &&
+				can.cartesian.y > min(p1.y, p2.y) &&
+				can.cartesian.y < max(p1.y, p2.y)) {
+				intersections.emplace_back(std::make_pair(true, can.cartesian));
+			}
+		}
+
+		double minMag = 1E100;
+		Vec3d intersection;
+		for (const auto& hit : intersections) {
+			if (hit.first && showRaycastDebugInfo) {
+				ofSetColor(122, 120, 35);
+				ofDrawCircle(
+					m_pos.x + hit.second.x * metreToPixel,
+					m_pos.y + hit.second.y * metreToPixel,
+					10
+				);
+			}
+
+			if (hit.first && (position - hit.second).mag2() < minMag) {
+				minMag = (position - hit.second).mag2();
+				intersection = hit.second;
+			}
+		}
+
+		auto edgeList = {
+			sensorLine, boxEdge0, boxEdge1, boxEdge2, boxEdge3,
+			raisedEdge0, raisedEdge1, raisedEdge2, raisedEdge3
+		};
+
+		if (showRaycastDebugInfo) {
+			ofSetColor(3, 82, 252);
+			for (const auto& edge : edgeList) {
+				ofDrawLine(
+					m_pos.x + edge.start.x * metreToPixel,
+					m_pos.y + edge.start.y * metreToPixel,
+					m_pos.x + edge.end.x * metreToPixel,
+					m_pos.y + edge.end.y * metreToPixel);
+			}
+
+			ofSetColor(242, 242, 39);
+			ofDrawCircle(
+				m_pos.x + intersection.x * metreToPixel,
+				m_pos.y + intersection.y * metreToPixel,
+				10
+			);
+		}
+
+		return intersection.mag();
+	}
+
 	void addCan(const Can& can) {
 		m_cans.emplace_back(can);
 	}
@@ -262,44 +387,107 @@ public:
 		// Draw scoring zones
 		ofSetLineWidth(1);
 		ofSetColor(0);
-		ofDrawLine(m_pos.x, m_pos.y + 2.5 * metreToPixel, m_pos.x + 2.5 * metreToPixel, m_pos.y);
-		ofDrawLine(m_pos.x + m_size.x - 2.5 * metreToPixel, m_pos.y, m_pos.x + m_size.x, m_pos.y + 2.5 * metreToPixel);
-		ofDrawLine(m_pos.x + m_size.x, m_pos.y + m_size.y - 2.5 * metreToPixel, m_pos.x + m_size.x - 2.5 * metreToPixel, m_pos.y + m_size.y);
-		ofDrawLine(m_pos.x, m_pos.y + m_size.y - 2.5 * metreToPixel, m_pos.x + 2.5 * metreToPixel, m_pos.y + m_size.y);
+		ofDrawLine(
+			m_pos.x,
+			m_pos.y + 2.5 * metreToPixel,
+			m_pos.x + 2.5 * metreToPixel,
+			m_pos.y
+		);
+
+		ofDrawLine(
+			m_pos.x + (m_size.x - 2.5) * metreToPixel,
+			m_pos.y,
+			m_pos.x + m_size.x * metreToPixel,
+			m_pos.y + 2.5 * metreToPixel
+		);
+
+		ofDrawLine(
+			m_pos.x + m_size.x * metreToPixel,
+			m_pos.y + (m_size.y - 2.5) * metreToPixel,
+			m_pos.x + (m_size.x - 2.5) * metreToPixel,
+			m_pos.y + m_size.y * metreToPixel
+		);
+
+		ofDrawLine(
+			m_pos.x,
+			m_pos.y + (m_size.y - 2.5) * metreToPixel,
+			m_pos.x + 2.5 * metreToPixel,
+			m_pos.y + m_size.y * metreToPixel
+		);
 
 		// Draw raised section
 		ofSetColor(150, 150, 150);
-		ofDrawRectangle(m_pos.x + m_size.x / 2 - 60, m_pos.y + m_size.y / 2 - 60, 120, 120);
+		ofDrawRectangle(
+			m_pos.x + (m_size.x * metreToPixel) / 2 - 0.6 * metreToPixel,
+			m_pos.y + (m_size.y * metreToPixel) / 2 - 0.6 * metreToPixel,
+			1.2 * metreToPixel,
+			1.2 * metreToPixel
+		);
 
 		// Draw starting zones
 		ofSetColor(201, 164, 85);
-		ofDrawRectangle(m_pos.x, m_pos.y, 1 * metreToPixel, 1 * metreToPixel);
-		ofDrawRectangle(m_pos.x + m_size.x - 1 * metreToPixel, m_pos.y, 1 * metreToPixel, 1 * metreToPixel);
-		ofDrawRectangle(m_pos.x + m_size.x - 1 * metreToPixel, m_pos.y + m_size.y - 1 * metreToPixel, 1 * metreToPixel, 1 * metreToPixel);
-		ofDrawRectangle(m_pos.x, m_pos.y + m_size.y - 1 * metreToPixel, 1 * metreToPixel, 1 * metreToPixel);
+		ofDrawRectangle(
+			m_pos.x,
+			m_pos.y,
+			1 * metreToPixel,
+			1 * metreToPixel
+		);
+
+		ofDrawRectangle(
+			m_pos.x + (m_size.x - 1) * metreToPixel,
+			m_pos.y,
+			1 * metreToPixel,
+			1 * metreToPixel
+		);
+
+		ofDrawRectangle(
+			m_pos.x + (m_size.x - 1) * metreToPixel,
+			m_pos.y + (m_size.y - 1) * metreToPixel,
+			1 * metreToPixel,
+			1 * metreToPixel
+		);
+
+		ofDrawRectangle(
+			m_pos.x,
+			m_pos.y + (m_size.y - 1) * metreToPixel,
+			1 * metreToPixel,
+			1 * metreToPixel
+		);
 
 		// Draw bounding box
 		ofSetColor(170, 50, 50);
 		ofNoFill();
 		ofSetLineWidth(5);
-		ofDrawRectangle(m_pos.x, m_pos.y, m_size.x, m_size.y);
+		ofDrawRectangle(m_pos.x, m_pos.y, m_size.x * metreToPixel, m_size.y * metreToPixel);
 		ofSetLineWidth(2);
 		ofFill();
 
 		// Draw all the markers as green dots
 		ofSetColor(50, 170, 50);
 		for (const auto& marker : m_markers)
-			ofDrawCircle(m_pos.x + marker.cartesian.x, m_pos.y + marker.cartesian.y, 10);
+			ofDrawCircle(
+				m_pos.x + marker.cartesian.x * metreToPixel,
+				m_pos.y + marker.cartesian.y * metreToPixel,
+				10
+			);
 
 		// Draw all the cans as purple dots
 		for (const auto& can : m_cans) {
 			ofSetColor(235, 52, 113);
-			ofDrawCircle(m_pos.x + can.cartesian.x, m_pos.y + can.cartesian.y, 10);
+			ofDrawCircle(
+				m_pos.x + can.cartesian.x * metreToPixel,
+				m_pos.y + can.cartesian.y * metreToPixel,
+				can.radius * metreToPixel
+			);
 
 			if (can.upright) {
 				ofSetColor(235, 86, 52);
 				ofNoFill();
-				ofDrawCircle(m_pos.x + can.cartesian.x, m_pos.y + can.cartesian.y, 10);
+				ofDrawCircle(
+					m_pos.x + can.cartesian.x * metreToPixel,
+					m_pos.y + can.cartesian.y * metreToPixel,
+					can.radius * metreToPixel
+				);
 				ofFill();
 			}
 		}
@@ -400,34 +588,55 @@ public:
 		for (const auto& marker : m_world->m_markers) {
 			// Position offsets from marker to robot
 			Vec3d offset(
-				m_world->m_pos.x + marker.cartesian.x - m_posUnknown.x,
-				m_world->m_pos.y + marker.cartesian.y - m_posUnknown.y
+				(m_world->m_pos.x - m_posUnknown.x) * pixelToMetre + marker.cartesian.x,
+				(m_world->m_pos.y - m_posUnknown.y) * pixelToMetre + marker.cartesian.y
 			);
 
-			// Calculate the angles for the field of view -- rayTheta is the angle the FOV makes with the x-axis
+			// Calculate the angles for the field of view
+			// rayTheta is the angle the FOV makes with the x-axis
 			double rayAngle = m_fov / 2;
-			double rayTheta = atan(sin(rayAngle + m_thetaUnknown) / cos(rayAngle + m_thetaUnknown));
+			double rayTheta = atan(
+				sin(rayAngle + m_thetaUnknown) /
+				cos(rayAngle + m_thetaUnknown)
+			);
 
-			// theta is the angle made between the line connecting the camera to the marker and the x-axis
-			// Offset is the change in y and x, so tan(theta) = offset.y / offset.x -- therefore theta = tan^-1(offset.y / offset.x)
+			// theta is the angle made between the line connecting
+			// the camera to the marker and the x-axis
+			// 
+			// Offset is the change in y and x, so tan(theta) = offset.y / offset.x
+			// therefore theta = tan^-1(offset.y / offset.x)
 			double theta = atan(offset.y / offset.x);
 
-			// Fix a problem where atan returns the angle to the *negative* x-axis -- we need the angle to the positive x
+			// Fix a problem where atan returns the angle to the *negative* x-axis
+			// *** we need the angle to the positive x ***
 			if (theta > 0 && rayTheta < 0) rayTheta += PI;
 
 			// Do some checks to see if the marker is within the robots FOV
 			// 1. Angle to marker is greater than the smaller FOV angle
 			// 2. Angle to marker is smaller than the larger FOV angle
 			// 3. Marker is in front of robot -- done by checking if dot-product is greater than 0
-			if (theta < rayTheta && theta > rayTheta - rayAngle * 2 && offset.dot(Vec3d(cos(rayAngle + m_thetaUnknown), sin(rayAngle + m_thetaUnknown))) > 0) {
+			if (theta < rayTheta &&
+				theta > rayTheta - rayAngle * 2
+				&& offset.dot(
+					Vec3d(cos(rayAngle + m_thetaUnknown),
+						sin(rayAngle + m_thetaUnknown))
+				) > 0) {
 				// Highlight the visible dots
 				ofSetColor(170, 170, 255);
-				ofDrawCircle(m_world->m_pos.x + marker.cartesian.x, m_world->m_pos.y + marker.cartesian.y, 15);
+				ofDrawCircle(
+					m_world->m_pos.x + marker.cartesian.x * metreToPixel,
+					m_world->m_pos.y + marker.cartesian.y * metreToPixel,
+					15
+				);
 
 				// Label each marker
 				if (m_world->m_markers.size() / 4 < 20) {
 					ofSetColor(255);
-					defaultFont.drawString(std::to_string(marker.id), m_world->m_pos.x + marker.cartesian.x - 30, m_world->m_pos.y + marker.cartesian.y - 30);
+					defaultFont.drawString(
+						std::to_string(marker.id),
+						m_world->m_pos.x + marker.cartesian.x * metreToPixel - 30,
+						m_world->m_pos.y + marker.cartesian.y * metreToPixel - 30
+					);
 				}
 
 				// =============================================================================================================
@@ -443,7 +652,7 @@ public:
 
 				Marker newMarker;
 				newMarker.id = marker.id;
-				newMarker.distance = offset.mag() * pixelToMetre;
+				newMarker.distance = offset.mag();
 				newMarker.cartesian = Vec3d(newMarker.distance * sin(alpha), newMarker.distance * cos(alpha));
 				visible.emplace_back(newMarker);
 			}
@@ -522,7 +731,11 @@ public:
 			// Draw a shit-ton of debugging things
 			// =================================================================
 
-			ofDrawRectangle(m_world->m_pos.x + markerDiffRobotSpace.x * metreToPixel, m_world->m_pos.y + markerDiffRobotSpace.y * metreToPixel, 20, 20);
+			ofDrawRectangle(
+				m_world->m_pos.x + markerDiffRobotSpace.x * metreToPixel,
+				m_world->m_pos.y + markerDiffRobotSpace.y * metreToPixel,
+				20, 20
+			);
 
 			ofPushMatrix();
 			ofTranslate(m_posUnknown.x, m_posUnknown.y);
@@ -553,22 +766,54 @@ public:
 			ofPopMatrix();
 
 			ofSetColor(226, 38, 255);
-			ofDrawLine(m_world->m_pos.x + worldspaceMarker1.cartesian.x * metreToPixel, m_world->m_pos.y + worldspaceMarker1.cartesian.y * metreToPixel,
-				m_world->m_pos.x + worldspaceMarker1.cartesian.x * metreToPixel + 100 * cos(theta + tau), m_world->m_pos.y + worldspaceMarker1.cartesian.y * metreToPixel + 100 * sin(theta + tau));
-			ofDrawCircle(m_world->m_pos.x + worldPosM1.x * metreToPixel, m_world->m_pos.y + worldPosM1.y * metreToPixel, 10);
+			ofDrawLine(
+				m_world->m_pos.x + worldspaceMarker1.cartesian.x * metreToPixel,
+				m_world->m_pos.y + worldspaceMarker1.cartesian.y * metreToPixel,
+				m_world->m_pos.x + worldspaceMarker1.cartesian.x * metreToPixel + 100 * cos(theta + tau),
+				m_world->m_pos.y + worldspaceMarker1.cartesian.y * metreToPixel + 100 * sin(theta + tau)
+			);
+
+			ofDrawCircle(
+				m_world->m_pos.x + worldPosM1.x * metreToPixel,
+				m_world->m_pos.y + worldPosM1.y * metreToPixel,
+				10
+			);
 
 			ofSetColor(201, 255, 38);
-			ofDrawLine(m_world->m_pos.x + worldspaceMarker2.cartesian.x * metreToPixel, m_world->m_pos.y + worldspaceMarker2.cartesian.y * metreToPixel,
-				m_world->m_pos.x + worldspaceMarker2.cartesian.x * metreToPixel + 100 * cos(PI - mu + tau), m_world->m_pos.y + worldspaceMarker2.cartesian.y * metreToPixel + 100 * sin(PI - mu + tau));
-			ofDrawCircle(m_world->m_pos.x + worldPosM2.x * metreToPixel, m_world->m_pos.y + worldPosM2.y * metreToPixel, 10);
+			ofDrawLine(
+				m_world->m_pos.x + worldspaceMarker2.cartesian.x * metreToPixel,
+				m_world->m_pos.y + worldspaceMarker2.cartesian.y * metreToPixel,
+				m_world->m_pos.x + worldspaceMarker2.cartesian.x * metreToPixel + 100 * cos(PI - mu + tau),
+				m_world->m_pos.y + worldspaceMarker2.cartesian.y * metreToPixel + 100 * sin(PI - mu + tau)
+			);
+
+
+			ofDrawCircle(
+				m_world->m_pos.x + worldPosM2.x * metreToPixel,
+				m_world->m_pos.y + worldPosM2.y * metreToPixel,
+				10
+			);
 
 			ofSetColor(255, 38, 38);
-			ofDrawCircle(m_world->m_pos.x + worldPosTrue.x * metreToPixel, m_world->m_pos.y + worldPosTrue.y * metreToPixel, 10);
+			ofDrawCircle(
+				m_world->m_pos.x + worldPosTrue.x * metreToPixel,
+				m_world->m_pos.y + worldPosTrue.y * metreToPixel,
+				10
+			);
 
 			ofSetColor(50, 50, 255);
-			ofDrawLine(m_posUnknown.x, m_posUnknown.y, m_posUnknown.x + 50 * cos(tau + kappa - HALF_PI), m_posUnknown.y - 50 * sin(tau + kappa - HALF_PI));
+			ofDrawLine(
+				m_posUnknown.x,
+				m_posUnknown.y,
+				m_posUnknown.x + 50 * cos(tau + kappa - HALF_PI),
+				m_posUnknown.y - 50 * sin(tau + kappa - HALF_PI)
+			);
 
-			defaultFont.drawString(std::to_string(rad2deg(tau)) + "\n" + std::to_string(rad2deg(tau + kappa)), 500, 500);
+			defaultFont.drawString(
+				std::to_string(rad2deg(tau)) + "\n" +
+				std::to_string(rad2deg(tau + kappa)),
+				500, 500
+			);
 		}
 
 		return { worldPosTrue, tau + kappa - HALF_PI };
@@ -606,7 +851,7 @@ public:
 	/// <returns></returns>
 	Vec3d projectedIntersection() const {
 		std::pair<Vec3d, double> position = calculateWorldspacePosition();
-		Line robotLine({ position.first.x, position.first.y }, 4 * Vec3d{ cos(position.second), sin(position.second) } + Vec3d{ position.first.x, position.first.y });
+		Line robotLine(position.first, 4 * Vec3d{ cos(position.second), sin(position.second) } + position.first);
 
 		std::vector<std::pair<bool, Vec3d>> intersections = {
 			robotLine.intersects(boxEdge0),
@@ -624,7 +869,11 @@ public:
 		for (const auto& hit : intersections) {
 			if (hit.first && showRaycastDebugInfo) {
 				ofSetColor(122, 120, 35);
-				ofDrawCircle(m_world->m_pos.x + hit.second.x * metreToPixel, m_world->m_pos.y + hit.second.y * metreToPixel, 10);
+				ofDrawCircle(
+					m_world->m_pos.x + hit.second.x * metreToPixel,
+					m_world->m_pos.y + hit.second.y * metreToPixel,
+					10
+				);
 			}
 
 			if (hit.first && (position.first - hit.second).mag2() < minMag) {
@@ -633,20 +882,38 @@ public:
 			}
 		}
 
+		auto edgeList = {
+			robotLine, boxEdge0, boxEdge1, boxEdge2, boxEdge3,
+			raisedEdge0, raisedEdge1, raisedEdge2, raisedEdge3
+		};
+
 		if (showRaycastDebugInfo) {
 			ofSetColor(3, 82, 252);
-			for (const auto& edge : { robotLine, boxEdge0, boxEdge1, boxEdge2, boxEdge3, raisedEdge0, raisedEdge1, raisedEdge2, raisedEdge3 }) {
-				ofDrawLine(m_world->m_pos.x + edge.start.x * metreToPixel, m_world->m_pos.y + edge.start.y * metreToPixel,
-					m_world->m_pos.x + edge.end.x * metreToPixel, m_world->m_pos.y + edge.end.y * metreToPixel);
+			for (const auto& edge : edgeList) {
+				ofDrawLine(
+					m_world->m_pos.x + edge.start.x * metreToPixel,
+					m_world->m_pos.y + edge.start.y * metreToPixel,
+					m_world->m_pos.x + edge.end.x * metreToPixel,
+					m_world->m_pos.y + edge.end.y * metreToPixel
+				);
 			}
 
 			ofSetColor(242, 242, 39);
-			ofDrawCircle(m_world->m_pos.x + intersection.x * metreToPixel, m_world->m_pos.y + intersection.y * metreToPixel, 10);
+			ofDrawCircle(m_world->m_pos.x + intersection.x * metreToPixel,
+				m_world->m_pos.y + intersection.y * metreToPixel,
+				10
+			);
 		}
 
-
-
 		return intersection;
+	}
+
+	bool lookingAtCan() const {
+		std::pair<Vec3d, double> position = calculateWorldspacePosition();
+		double calculatedDistance = projectedIntersection().mag();
+		double actualDistance = m_world->distanceSensor(position.first, position.second);
+		if (abs(calculatedDistance - actualDistance) > 0.1) return true;
+		return false;
 	}
 
 	void update() {
@@ -679,15 +946,4 @@ public:
 	/// </summary>
 	Vec3d m_posUnknown;
 	double m_thetaUnknown = 0;
-
-	// Hard-coded stuff for performance improvements
-	const Line boxEdge0 = Line({ 0, 0 }, { 5.75, 0 }); // Top edge of box
-	const Line boxEdge1 = Line({ 5.75, 0 }, { 5.75, 5.75 }); // Right edge of box
-	const Line boxEdge2 = Line({ 0, 5.75 }, { 5.75, 5.75 }); // Bottom edge of box
-	const Line boxEdge3 = Line({ 0, 0 }, { 0, 5.75 }); // Left edge of box
-
-	const Line raisedEdge0 = Line({ 5.75 / 2 - 0.60, 5.75 / 2 - 0.60 }, { 5.75 / 2 + 0.60, 5.75 / 2 - 0.60 }); // Top edge of raised area
-	const Line raisedEdge1 = Line({ 5.75 / 2 + 0.60, 5.75 / 2 - 0.60 }, { 5.75 / 2 + 0.60, 5.75 / 2 + 0.60 }); // Right edge of raised area
-	const Line raisedEdge2 = Line({ 5.75 / 2 - 0.60, 5.75 / 2 + 0.60 }, { 5.75 / 2 + 0.60, 5.75 / 2 + 0.60 }); // Bottom edge of raised area
-	const Line raisedEdge3 = Line({ 5.75 / 2 - 0.60, 5.75 / 2 - 0.60 }, { 5.75 / 2 - 0.60, 5.75 / 2 + 0.60 }); // Left edge of raised area
 };
