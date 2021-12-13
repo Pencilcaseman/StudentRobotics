@@ -17,6 +17,9 @@ void ofApp::setup() {
 	srRobot = Robot(&world, Vec3d(50, 50), 72);
 	// srRobot.setPosUnknown({ world.m_pos.x + 0.5 * metreToPixel, world.m_pos.y + 0.5 * metreToPixel }, PI / 4);
 	srRobot.setPosUnknown({ world.m_pos.x + 0.5 * metreToPixel, world.m_pos.y + 0.5 * metreToPixel }, -PI / 2);
+
+	// Add a single can to the world
+	world.addCan(Can({ 200, 200 }, false));
 }
 
 //--------------------------------------------------------------

@@ -169,6 +169,14 @@ public:
 	Vec3d cartesian; // A Vec3d instance describing the absolute position of the marker relative to the camera
 };
 
+class Can : public Marker {
+public:
+	Can() : Marker() {}
+	Can(Vec3d cartesian, bool upright = true) : Marker(cartesian), upright(upright) {}
+
+	bool upright;
+};
+
 class World {
 public:
 	World() = default;
@@ -246,6 +254,10 @@ public:
 		std::exit(1);
 	}
 
+	void addCan(const Can& can) {
+		m_cans.emplace_back(can);
+	}
+
 	void draw() const {
 		// Draw scoring zones
 		ofSetLineWidth(1);
@@ -278,12 +290,26 @@ public:
 		ofSetColor(50, 170, 50);
 		for (const auto& marker : m_markers)
 			ofDrawCircle(m_pos.x + marker.cartesian.x, m_pos.y + marker.cartesian.y, 10);
+
+		// Draw all the cans as purple dots
+		for (const auto& can : m_cans) {
+			ofSetColor(235, 52, 113);
+			ofDrawCircle(m_pos.x + can.cartesian.x, m_pos.y + can.cartesian.y, 10);
+
+			if (can.upright) {
+				ofSetColor(235, 86, 52);
+				ofNoFill();
+				ofDrawCircle(m_pos.x + can.cartesian.x, m_pos.y + can.cartesian.y, 10);
+				ofFill();
+			}
+		}
 	}
 
 public:
 	Vec3d m_pos;
 	Vec3d m_size;
 	std::vector<Marker> m_markers;
+	std::vector<Can> m_cans;
 };
 
 class Robot {
