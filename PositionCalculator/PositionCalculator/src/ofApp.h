@@ -21,8 +21,8 @@ static bool showRaycastDebugInfo = false;
  * and the rendered board is 575 pixels square
  */
 
-constexpr double pixelToMetre = 0.01;
-constexpr double metreToPixel = 100;
+constexpr double pixelToMetre = 0.005;
+constexpr double metreToPixel = 1.0 / pixelToMetre;
 
 // constexpr int64_t worldMarkers = 12; // Show a few markers for debugging purposes
 // constexpr double markerError = 0.00;
@@ -327,10 +327,10 @@ public:
 			}
 			Vec3d relative = { can.cartesian.x - intersectX, can.cartesian.y - intersectY };
 			if (relative.mag2() < can.radius * can.radius &&
-				can.cartesian.x > min(p1.x, p2.x) &&
-				can.cartesian.x < max(p1.x, p2.x) &&
-				can.cartesian.y > min(p1.y, p2.y) &&
-				can.cartesian.y < max(p1.y, p2.y)) {
+				can.cartesian.x >= min(p1.x, p2.x) &&
+				can.cartesian.x <= max(p1.x, p2.x) &&
+				can.cartesian.y >= min(p1.y, p2.y) &&
+				can.cartesian.y <= max(p1.y, p2.y)) {
 				intersections.emplace_back(std::make_pair(true, can.cartesian));
 			}
 		}
@@ -473,23 +473,29 @@ public:
 
 		// Draw all the cans as purple dots
 		for (const auto& can : m_cans) {
-			ofSetColor(235, 52, 113);
+			if (can.upright) {
+				ofSetColor(150, 50, 255);
+			}
+			else {
+				ofSetColor(250, 120, 120);
+			}
+
 			ofDrawCircle(
 				m_pos.x + can.cartesian.x * metreToPixel,
 				m_pos.y + can.cartesian.y * metreToPixel,
 				can.radius * metreToPixel
 			);
 
-			if (can.upright) {
-				ofSetColor(235, 86, 52);
-				ofNoFill();
-				ofDrawCircle(
-					m_pos.x + can.cartesian.x * metreToPixel,
-					m_pos.y + can.cartesian.y * metreToPixel,
-					can.radius * metreToPixel
-				);
-				ofFill();
-			}
+			// if (can.upright) {
+			// 	ofSetColor(86, 254, 52);
+			// 	ofNoFill();
+			// 	ofDrawCircle(
+			// 		m_pos.x + can.cartesian.x * metreToPixel,
+			// 		m_pos.y + can.cartesian.y * metreToPixel,
+			// 		can.radius * metreToPixel
+			// 	);
+			// 	ofFill();
+			// }
 		}
 	}
 
