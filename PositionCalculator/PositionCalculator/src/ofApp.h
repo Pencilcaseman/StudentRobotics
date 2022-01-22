@@ -39,6 +39,8 @@ constexpr double markerError = 0.02;
 // constexpr int64_t worldMarkers = 10000; // LOADS of markers to make sure stuff works
 // constexpr double markerError = 0.00;
 
+constexpr double distanceSensorMaxRange = 2.00;
+
 static ofTrueTypeFont defaultFont;
 
 class ofApp : public ofBaseApp {
@@ -294,7 +296,7 @@ public:
 	/// </summary>
 	/// <returns></returns>
 	double distanceSensor(Vec3d position, double theta) const {
-		Line sensorLine(position, 4 * Vec3d{ cos(theta), sin(theta) } + position);
+		Line sensorLine(position, distanceSensorMaxRange * Vec3d{ cos(theta), sin(theta) } + position);
 
 		std::vector<std::pair<bool, Vec3d>> intersections = {
 			sensorLine.intersects(boxEdge0),
@@ -311,7 +313,7 @@ public:
 		// Interactive for this available here: https://www.desmos.com/calculator/yzqi2u5gmf
 		for (const auto& can : m_cans) {
 			Vec3d p1 = position;
-			Vec3d p2 = position + 4 * Vec3d{ cos(theta), sin(theta) };
+			Vec3d p2 = position + distanceSensorMaxRange * Vec3d{ cos(theta), sin(theta) };
 
 			// double m = (position.y - can.cartesian.y) / (position.x - can.cartesian.x);
 			double m = (p2.y - p1.y) / (p2.x - p1.x);
@@ -508,7 +510,7 @@ public:
 
 class Robot {
 public:
-	Robot(World* world = nullptr) : m_world(world) {}
+	Robot(World* world = nullptr) : m_world(world), m_distanceRange(distanceSensorMaxRange) {}
 
 	Robot(World* world, const Vec3d& size, double fov = 72) : m_world(world) {
 		m_size = size;
@@ -517,6 +519,8 @@ public:
 
 		m_worldView = World({ 0, 0 }, { 5.75, 5.75 });
 		m_worldView.populateMarkers(worldMarkers, 0.0);
+
+		m_distanceRange = distanceSensorMaxRange;
 	}
 
 	Robot(const Robot& other) {
@@ -525,6 +529,8 @@ public:
 		m_fov = other.m_fov;
 		m_world = other.m_world;
 		m_worldView = other.m_worldView;
+
+		m_distanceRange = distanceSensorMaxRange;
 	}
 
 	Robot& operator=(const Robot& other) {
@@ -564,10 +570,10 @@ public:
 		ofTranslate(m_posUnknown.x, m_posUnknown.y);
 		// ofRotateRad(m_thetaUnknown - (PI / 2));
 		ofRotateRad(m_thetaUnknown);
-		ofDrawRectRounded(-m_size.x / 2, -m_size.y / 2, m_size.x, m_size.x, 10);
+		ofDrawRectRounded(-(m_size.x * metreToPixel) / 2, -(m_size.y * metreToPixel) / 2, m_size.x * metreToPixel, m_size.y * metreToPixel, 10);
 		ofSetColor(0);
-		ofDrawCircle(m_size.x * 0.3, m_size.y * 0.3, 5);
-		ofDrawCircle(m_size.x * 0.3, m_size.y * -0.3, 5);
+		ofDrawCircle((m_size.x * metreToPixel) * 0.3, (m_size.y * metreToPixel) * 0.3, 0.05 * metreToPixel);
+		ofDrawCircle((m_size.x * metreToPixel) * 0.3, (m_size.y * metreToPixel) * -0.3, 0.05 * metreToPixel);
 		ofPopMatrix();
 
 		// Find screen-space origin and end-point of ray
@@ -579,7 +585,7 @@ public:
 
 		end2.x = origin.x + 100 * cos(-rayAngle + m_thetaUnknown);
 		end2.y = origin.y + 100 * sin(-rayAngle + m_thetaUnknown);
-
+		
 		// Draw the lines to show the FOV of the camera
 		ofSetColor(255, 0, 0);
 		ofDrawLine(origin.x, origin.y, end1.x, end1.y);
@@ -857,7 +863,7 @@ public:
 	/// <returns></returns>
 	Vec3d projectedIntersection() const {
 		std::pair<Vec3d, double> position = calculateWorldspacePosition();
-		Line robotLine(position.first, 4 * Vec3d{ cos(position.second), sin(position.second) } + position.first);
+		Line robotLine(position.first, m_distanceRange * Vec3d{ cos(position.second), sin(position.second) } + position.first);
 
 		std::vector<std::pair<bool, Vec3d>> intersections = {
 			robotLine.intersects(boxEdge0),
@@ -952,4 +958,6 @@ public:
 	/// </summary>
 	Vec3d m_posUnknown;
 	double m_thetaUnknown = 0;
+
+	double m_distanceRange = 0;
 };
