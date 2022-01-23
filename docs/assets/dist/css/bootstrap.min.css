@@ -9871,3 +9871,77 @@ fieldset:disabled .btn {
   }
 }
 /*# sourceMappingURL=bootstrap.min.css.map */
+
+.ctheme-white {
+  --bs-text-opacity: 1;
+  color: #fbfbfb !important;
+}
+
+.ctheme-green {
+  --bs-text-opacity: 1;
+  color: #66a182 !important;
+}
+
+.ctheme-gray {
+  --bs-text-opacity: 1;
+  color: #413c39 !important;
+}
+
+.ctheme-black {
+  --bs-text-opacity: 1;
+  color: #2c2826 !important;
+}
+
+.ctheme-cream {
+  --bs-text-opacity: 1;
+  color: #f1bf98 !important;
+}
+
+.cbg-white {
+  --bs-bg-opacity: 1;
+  background-color: #fbfbfb;
+}
+
+.cbg-green {
+  --bs-bg-opacity: 1;
+  background-color: #66a182;
+}
+
+.cbg-gray {
+  --bs-bg-opacity: 1;
+  background-color: #413c39;
+}
+
+.cbg-black {
+  --bs-bg-opacity: 1;
+  background-color: #2c2826;
+}
+
+.cbg-cream {
+  --bs-bg-opacity: 1;
+  background-color: #f1bf98;
+}
+
+.cbord-white {
+  border-color: #fbfbfb;
+}
+
+.cbord-green {
+  border-color: #66a182;
+}
+
+.cbord-gray {
+  border-color: #413c39;
+}
+
+.cbord-black {
+  border-color: #2c2826;
+}
+
+.cbord-cream {
+  border-color: #f1bf98;
+}
+
+.cbg-green:hover {
+  background-color: #f1bf98 !important;
+}
