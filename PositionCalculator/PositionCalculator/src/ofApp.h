@@ -585,7 +585,7 @@ public:
 
 		end2.x = origin.x + 100 * cos(-rayAngle + m_thetaUnknown);
 		end2.y = origin.y + 100 * sin(-rayAngle + m_thetaUnknown);
-		
+
 		// Draw the lines to show the FOV of the camera
 		ofSetColor(255, 0, 0);
 		ofDrawLine(origin.x, origin.y, end1.x, end1.y);
@@ -927,6 +927,31 @@ public:
 		if (abs(calculatedDistance - actualDistance) > 0.1) return true;
 		return false;
 	}
+
+	std::vector<Vec3f> generatePathPoints() const {
+		int64_t resolution = 50;
+		Vec3f offset = m_world->m_size / (resolution * 2);
+		Vec3f inc = m_world->m_size / (float)resolution;
+		std::vector<std::vector<Vec3f>> points;
+		for (int64_t i = 0; i < resolution; ++i) {
+			std::vector<Vec3f> row;
+			for (int64_t j = 0; j < resolution; ++j) {
+				row.emplace_back(offset + Vec3f(j * inc.x, i * inc.y));
+			}
+			points.emplace_back(row);
+		}
+		
+		ofSetColor(255, 100);
+		for (const auto& row : points) {
+			for (const auto& point : row) {
+				auto pos = m_world->m_pos + point * metreToPixel;
+				ofDrawCircle(pos.x, pos.y, 8);
+			}
+		}
+
+		return {};
+	}
+
 
 	void update() {
 		while (m_thetaUnknown > TWO_PI) m_thetaUnknown -= TWO_PI;

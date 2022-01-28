@@ -117,6 +117,8 @@ void ofApp::draw() {
 		ofSetColor(113, 252, 43);
 		ofDrawCircle(world.m_pos.x + world.m_size.x * metreToPixel / 2, world.m_pos.y + world.m_size.y * metreToPixel / 2, 25);
 	}
+
+	srRobot.generatePathPoints();
 }
 
 //--------------------------------------------------------------

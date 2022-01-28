@@ -274,6 +274,13 @@ public:
 	template<typename X = DTYPE, typename Y = DTYPE, typename Z = DTYPE>
 	Vec(X x, Y y = 0, Z z = 0) : x(x), y(y), z(z) {}
 
+	template<typename T, uint64_t dims>
+	Vec(const Vec<T, dims>& other) {
+		x = other.x;
+		y = other.y;
+		z = other.z;
+	}
+	
 	Vec(const Vec<DTYPE, 3>& other) {
 		x = other.x;
 		y = other.y;
