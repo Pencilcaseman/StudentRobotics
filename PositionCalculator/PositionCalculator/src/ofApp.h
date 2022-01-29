@@ -21,7 +21,7 @@ static bool showRaycastDebugInfo = false;
  * and the rendered board is 575 pixels square
  */
 
-constexpr double pixelToMetre = 0.005;
+constexpr double pixelToMetre = 0.01;
 constexpr double metreToPixel = 1.0 / pixelToMetre;
 
 // constexpr int64_t worldMarkers = 12; // Show a few markers for debugging purposes
@@ -945,7 +945,7 @@ public:
 		for (const auto& row : points) {
 			for (const auto& point : row) {
 				auto pos = m_world->m_pos + point * metreToPixel;
-				ofDrawCircle(pos.x, pos.y, 8);
+				ofDrawCircle(pos.x, pos.y, 0.05 * metreToPixel);
 			}
 		}
 
