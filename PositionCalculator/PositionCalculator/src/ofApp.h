@@ -928,6 +928,9 @@ public:
 		return false;
 	}
 
+	// THIS NEEDS TO BE OPTIMISED -- SOME STUFF HERE IS FOR DEBUGGING
+	// PURPOSES AND CAN BE REMOVED AND REPLACED WITH MORE PERFORMANT
+	// AND MEMORY-EFFICIENT ALTERNATIVES
 	std::vector<Vec3f> generatePathPoints() const {
 		int64_t resolution = 50;
 		Vec3f offset = m_world->m_size / (resolution * 2);
@@ -940,12 +943,97 @@ public:
 			}
 			points.emplace_back(row);
 		}
+
+		// Set the nodes around cans and too close to the edge as walls
+		const float minDist = m_size.mag() * 0.5 + 0.05; // This gives a 5cm buffer on the longest diagonal edge -- should be enough
+		for (auto& row : points) {
+			for (auto& point : row) {
+				// Check for edges
+				if (point.x < minDist || m_world->m_size.x - point.x < minDist) {
+					point.z = 1; // Set it to "wall"
+					continue;
+				}
+
+				if (point.y < minDist || m_world->m_size.y - point.y < minDist) {
+					point.z = 1; // Set it to "wall"
+					continue;
+				}
+
+				// Check for raised section:
+				// Corners
+				if ((point - raisedEdge0.start).mag() < minDist) {
+					point.z = 1;
+					continue;
+				}
+				else if ((point - raisedEdge0.end).mag() < minDist) {
+					point.z = 1;
+					continue;
+				}
+				else if ((point - raisedEdge2.start).mag() < minDist) {
+					point.z = 1;
+					continue;
+				}
+				else if ((point - raisedEdge2.end).mag() < minDist) {
+					point.z = 1;
+					continue;
+				}
+
+				// Top edge
+				if (abs(point.y - raisedEdge0.start.y) < minDist && point.x > raisedEdge0.start.x && point.x < raisedEdge0.end.x) {
+					point.z = 1;
+					continue;
+				}
+				// Right edge
+				else if (abs(point.x - raisedEdge1.start.x) < minDist && point.y > raisedEdge1.start.y && point.y < raisedEdge1.end.y) {
+					point.z = 1;
+					continue;
+				}
+				else if (abs(point.y - raisedEdge2.start.y) < minDist && point.x > raisedEdge2.start.x && point.x < raisedEdge2.end.x) {
+					point.z = 1;
+					continue;
+				}
+				else if (abs(point.x - raisedEdge3.start.x) < minDist && point.y > raisedEdge3.start.y && point.y < raisedEdge3.end.y) {
+					point.z = 1;
+					continue;
+				}
+
+				// Check for cans
+				for (const auto& can : m_world->m_cans) {
+					if ((can.cartesian - point).mag() < minDist) {
+						point.z = 1;
+						continue;
+					}
+				}
+			}
+		}
+
+		struct node {
+			Vec3f* pos;
+			Vec3f* up;
+			Vec3f* down;
+			Vec3f* left;
+			Vec3f* right;
+			Vec3f* upright;
+			Vec3f* upleft;
+			Vec3f* downright;
+			Vec3f* downleft;
+		};
+
+		// Populate the points
+
+
+
+		std::vector<Vec3f> openSet;
+		std::vector<Vec3f> closedSet;
 		
-		ofSetColor(255, 100);
+		float rad = min(inc.mag() * metreToPixel * 0.3, 0.05 * metreToPixel);
 		for (const auto& row : points) {
 			for (const auto& point : row) {
 				auto pos = m_world->m_pos + point * metreToPixel;
-				ofDrawCircle(pos.x, pos.y, 0.05 * metreToPixel);
+
+				if (point.z == 0) ofSetColor(255, 100);
+				else ofSetColor(255, 50, 50, 100);
+				ofDrawCircle(pos.x, pos.y, rad);
 			}
 		}
 
