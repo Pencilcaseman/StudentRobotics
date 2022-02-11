@@ -18,11 +18,9 @@ function topFunction() {
   document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
 }
 function grab(){
-	let caption = [];
-	let thumbnail = [];
 	caption = document.getElementsByClassName("card-text");
-	thumbnail = document.getElementsByClassName("bd-placeholder-img card-img-top");
-	for (let i=0; i<caption.length; i++){
-		caption[i].innerHTML = i.toString(); //testing ability to overwrite captions of each box
+	var i = 0;
+	for (i=0;i++;i<caption.length){
+		caption[i].innerHTML = i.toString();
 	}
 }
