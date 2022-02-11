@@ -20,9 +20,16 @@ function topFunction() {
 function grab(){
 	let caption = [];
 	let thumbnail = [];
+	let posts = [];
+	
+	//Pull information from HAM social media webpages
+	//Use instafeed jquery plugin here
+	//Twitter integration tool of choice TBD
+
+	//Write to HTML
 	caption = document.getElementsByClassName("card-text");
 	thumbnail = document.getElementsByClassName("bd-placeholder-img card-img-top");
 	for (let i=0; i<caption.length; i++){
-		caption[i].innerHTML = i.toString(); //testing ability to overwrite captions of each box
+		caption[i].innerHTML = i.toString();
 	}
 }
