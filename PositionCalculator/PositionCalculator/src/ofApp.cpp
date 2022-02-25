@@ -118,7 +118,7 @@ void ofApp::draw() {
 		ofDrawCircle(world.m_pos.x + world.m_size.x * metreToPixel / 2, world.m_pos.y + world.m_size.y * metreToPixel / 2, 25);
 	}
 
-	srRobot.generatePathPoints();
+	srRobot.generatePathPoints({mouseX, mouseY});
 }
 
 //--------------------------------------------------------------

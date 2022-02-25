@@ -461,10 +461,10 @@ public:
 	template<typename T>
 	Vec<Common<T>, 3> cross(const Vec<T, 3>& other) const {
 		return Vec<Common<T>, 3>(
-			y * other.z - z * other.y,
-			z * other.x - x * other.z,
-			x * other.y - y * other.x
-			);
+					y * other.z - z * other.y,
+					z * other.x - x * other.z,
+					x * other.y - y * other.x
+				);
 	}
 
 	std::string str() const {

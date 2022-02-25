@@ -21,7 +21,7 @@ static bool showRaycastDebugInfo = false;
  * and the rendered board is 575 pixels square
  */
 
-constexpr double pixelToMetre = 0.01;
+constexpr double pixelToMetre = 0.005;
 constexpr double metreToPixel = 1.0 / pixelToMetre;
 
 // constexpr int64_t worldMarkers = 12; // Show a few markers for debugging purposes
@@ -42,6 +42,28 @@ constexpr double markerError = 0.02;
 constexpr double distanceSensorMaxRange = 2.00;
 
 static ofTrueTypeFont defaultFont;
+
+namespace librapid {
+	inline double map(double val,
+		double start1, double stop1,
+		double start2, double stop2) {
+		return start2 + (stop2 - start2) * ((val - start1) / (stop1 - start1));
+	}
+}
+
+template<typename T>
+inline const T &getGridPoint(const std::vector<std::vector<T>> &vals, int64_t index) {
+	int64_t row = index / vals[0].size();
+	int64_t col = index - row * vals[0].size();
+	return vals[row][col];
+}
+
+template<typename T>
+inline T& getGridPoint(std::vector<std::vector<T>>& vals, int64_t index) {
+	int64_t row = index / vals[0].size();
+	int64_t col = index - row * vals[0].size();
+	return vals[row][col];
+}
 
 class ofApp : public ofBaseApp {
 
@@ -931,7 +953,7 @@ public:
 	// THIS NEEDS TO BE OPTIMISED -- SOME STUFF HERE IS FOR DEBUGGING
 	// PURPOSES AND CAN BE REMOVED AND REPLACED WITH MORE PERFORMANT
 	// AND MEMORY-EFFICIENT ALTERNATIVES
-	std::vector<Vec3f> generatePathPoints() const {
+	std::vector<Vec3f> generatePathPoints(const Vec3f &targetCoord) const {
 		int64_t resolution = 50;
 		Vec3f offset = m_world->m_size / (resolution * 2);
 		Vec3f inc = m_world->m_size / (float)resolution;
@@ -943,7 +965,15 @@ public:
 			}
 			points.emplace_back(row);
 		}
-
+		
+		int col = int(librapid::map((targetCoord.x - m_world->m_pos.x) * pixelToMetre, 0, m_world->m_size.x, 0, resolution));
+		int row = int(librapid::map((targetCoord.y - m_world->m_pos.y) * pixelToMetre, 0, m_world->m_size.y, 0, resolution));
+		if (col < 0) col = 0;
+		if (row < 0) row = 0;
+		if (col >= resolution) col = resolution - 1;
+		if (row >= resolution) row = resolution - 1;
+		Vec3f& target = points[row][col];
+		
 		// Set the nodes around cans and too close to the edge as walls
 		const float minDist = m_size.mag() * 0.5 + 0.05; // This gives a 5cm buffer on the longest diagonal edge -- should be enough
 		for (auto& row : points) {
@@ -983,6 +1013,7 @@ public:
 					point.z = 1;
 					continue;
 				}
+
 				// Right edge
 				else if (abs(point.x - raisedEdge1.start.x) < minDist && point.y > raisedEdge1.start.y && point.y < raisedEdge1.end.y) {
 					point.z = 1;
@@ -999,9 +1030,8 @@ public:
 
 				// Check for cans
 				for (const auto& can : m_world->m_cans) {
-					if ((can.cartesian - point).mag() < minDist) {
+					if ((can.cartesian - point).mag2() < minDist * minDist) {
 						point.z = 1;
-						continue;
 					}
 				}
 			}
@@ -1019,20 +1049,26 @@ public:
 			Vec3f* downleft;
 		};
 
-		// Populate the points
+		target.z = 10; // Target coordinate
 
+		int64_t maxPathLen = resolution * 3; // Anything more than this and we should probably ignore it
+		// std::vector<int64_t> path(-1, maxPathLen);
+		std::vector<int64_t> path(maxPathLen, -1);
+		int64_t pathIndex = 0; // If this becomes greater than 1
 
-
-		std::vector<Vec3f> openSet;
-		std::vector<Vec3f> closedSet;
+		// while (getGridPoint(points, pathIndex) != target) {
+		// 
+		// }
 		
 		float rad = min(inc.mag() * metreToPixel * 0.3, 0.05 * metreToPixel);
 		for (const auto& row : points) {
 			for (const auto& point : row) {
 				auto pos = m_world->m_pos + point * metreToPixel;
 
-				if (point.z == 0) ofSetColor(255, 100);
-				else ofSetColor(255, 50, 50, 100);
+				if (point.z == 0) ofSetColor(255, 100); // Just a point
+				else if (point.z == 1) ofSetColor(255, 50, 50, 100); // Can't go here
+				else if (point.z == 2) ofSetColor(240, 3, 252, 100); // Path
+				else if (point.z == 10) ofSetColor(50, 255, 50, 100); // GWEEN!
 				ofDrawCircle(pos.x, pos.y, rad);
 			}
 		}
