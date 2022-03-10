@@ -18,18 +18,9 @@ function topFunction() {
   document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
 }
 function grab(){
-	let caption = [];
-	let thumbnail = [];
-	let posts = [];
-	
-	//Pull information from HAM social media webpages
-	//Use instafeed jquery plugin here
-	//Twitter integration tool of choice TBD
-
-	//Write to HTML
 	caption = document.getElementsByClassName("card-text");
-	thumbnail = document.getElementsByClassName("bd-placeholder-img card-img-top");
-	for (let i=0; i<caption.length; i++){
+	var i = 0;
+	for (i=0;i++;i<caption.length){
 		caption[i].innerHTML = i.toString();
 	}
 }
