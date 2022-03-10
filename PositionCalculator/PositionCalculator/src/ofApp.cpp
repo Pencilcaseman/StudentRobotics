@@ -62,6 +62,8 @@ void ofApp::setup() {
 	for (const auto& can : canPositionsRaised) {
 		world.addCan(Can(can, true, 0.067));
 	}
+
+	srRobot.setupPathFinding(50);
 }
 
 //--------------------------------------------------------------
@@ -165,6 +167,13 @@ void ofApp::mousePressed(int x, int y, int button) {
 		double toMouse = atan((mouseY - srRobot.m_posUnknown.y) / (mouseX - srRobot.m_posUnknown.x));
 		if (mouseX < srRobot.m_posUnknown.x && toMouse < PI) toMouse -= PI;
 		srRobot.m_thetaUnknown = toMouse;
+	}
+
+	if (button == 1) {
+		Vec2f pos = { x, y };
+		pos -= world.m_pos;
+		pos *= pixelToMetre;
+		srRobot.m_pathFinder.removePointNear(pos, 0.20);
 	}
 }
 

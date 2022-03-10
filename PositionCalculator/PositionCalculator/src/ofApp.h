@@ -9,6 +9,7 @@
 #include <random>
 
 #include "vector.hpp"
+#include "pathfind.hpp"
 
 // Just some stuff
 static bool showPositionDebugInfo = false;
@@ -21,7 +22,7 @@ static bool showRaycastDebugInfo = false;
  * and the rendered board is 575 pixels square
  */
 
-constexpr double pixelToMetre = 0.005;
+constexpr double pixelToMetre = 0.01;
 constexpr double metreToPixel = 1.0 / pixelToMetre;
 
 // constexpr int64_t worldMarkers = 12; // Show a few markers for debugging purposes
@@ -950,10 +951,32 @@ public:
 		return false;
 	}
 
+	void setupPathFinding(int64_t resolution) {
+		const float minDist = m_size.mag() * 0.5 + 0.05; // This gives a 5cm buffer on the longest diagonal edge -- should be enough
+
+		m_pathFinder.construct(m_world->m_size, { resolution, resolution });
+
+		for (const auto& can : m_world->m_cans) {
+			m_pathFinder.addPoint(can.cartesian, minDist);
+		}
+
+		m_pathFinder.addLine(boxEdge0.start, boxEdge0.end, minDist);
+		m_pathFinder.addLine(boxEdge1.start, boxEdge1.end, minDist);
+		m_pathFinder.addLine(boxEdge2.start, boxEdge2.end, minDist);
+		m_pathFinder.addLine(boxEdge3.start, boxEdge3.end, minDist);
+
+		m_pathFinder.addLine(raisedEdge0.start, raisedEdge0.end, minDist);
+		m_pathFinder.addLine(raisedEdge1.start, raisedEdge1.end, minDist);
+		m_pathFinder.addLine(raisedEdge2.start, raisedEdge2.end, minDist);
+		m_pathFinder.addLine(raisedEdge3.start, raisedEdge3.end, minDist);
+
+		m_pathFinder.bake();
+	}
+
 	// THIS NEEDS TO BE OPTIMISED -- SOME STUFF HERE IS FOR DEBUGGING
 	// PURPOSES AND CAN BE REMOVED AND REPLACED WITH MORE PERFORMANT
 	// AND MEMORY-EFFICIENT ALTERNATIVES
-	std::vector<Vec3f> generatePathPoints(const Vec3f &targetCoord) const {
+	std::vector<Vec3f> generatePathPoints(const Vec3f &targetCoord) {
 		int64_t resolution = 50;
 		Vec3f offset = m_world->m_size / (resolution * 2);
 		Vec3f inc = m_world->m_size / (float)resolution;
@@ -972,8 +995,8 @@ public:
 		if (row < 0) row = 0;
 		if (col >= resolution) col = resolution - 1;
 		if (row >= resolution) row = resolution - 1;
-		Vec3f& target = points[row][col];
-		
+
+		/*
 		// Set the nodes around cans and too close to the edge as walls
 		const float minDist = m_size.mag() * 0.5 + 0.05; // This gives a 5cm buffer on the longest diagonal edge -- should be enough
 		for (auto& row : points) {
@@ -1059,16 +1082,23 @@ public:
 		// while (getGridPoint(points, pathIndex) != target) {
 		// 
 		// }
-		
+		*/
+
+		m_pathFinder.setTarget(row, col);
+		m_pathFinder.bake(); // This is just to update the target cell
+
+		auto pathPoints = m_pathFinder.getPoints();
+
 		float rad = min(inc.mag() * metreToPixel * 0.3, 0.05 * metreToPixel);
-		for (const auto& row : points) {
+
+		for (const auto& row : pathPoints) {
 			for (const auto& point : row) {
 				auto pos = m_world->m_pos + point * metreToPixel;
 
-				if (point.z == 0) ofSetColor(255, 100); // Just a point
-				else if (point.z == 1) ofSetColor(255, 50, 50, 100); // Can't go here
-				else if (point.z == 2) ofSetColor(240, 3, 252, 100); // Path
-				else if (point.z == 10) ofSetColor(50, 255, 50, 100); // GWEEN!
+				if (point.z == pathFindDefault) ofSetColor(255, 100); // Just a point
+				else if (point.z == pathFindInvalid) ofSetColor(255, 50, 50, 100); // Can't go here
+				else if (point.z == pathFindPath) ofSetColor(240, 3, 252, 100); // Path
+				else if (point.z == pathFindTarget) ofSetColor(50, 255, 50, 100); // GWEEN!
 				ofDrawCircle(pos.x, pos.y, rad);
 			}
 		}
@@ -1087,6 +1117,8 @@ public:
 	World* m_world;
 
 	World m_worldView;
+
+	PathFinder m_pathFinder;
 
 	/// <summary>
 	/// Width and height of robot
