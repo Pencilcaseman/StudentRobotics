@@ -1,0 +1,104 @@
+.juicer-feed.modern li.feed-item {
+  background: #413c39;
+  border: none;
+}
+
+.juicer-feed.modern .j-message {
+  color: white;
+}
+
+.j-poster h3 {
+  color: white;
+}
+
+ul.juicer-feed .j-meta li:last-of-type {
+  display: none;
+}
+
+ul.juicer-feed .j-meta .comment {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+ul.juicer-feed .j-meta .comments:before {
+  content: "";
+}
+
+ul.juicer-feed .j-meta .comments:after {
+  content: " comments";
+}
+
+.juicer-feed .j-meta {
+  border-top: 1px solid #808080;
+  padding-top: 10px;
+}
+
+ul.juicer-feed .j-meta a:before {
+  content: "";
+}
+
+ul.juicer-feed .j-meta .facebook,
+ul.juicer-feed .j-meta .instagram {
+  height: 20px;
+  width: 20px;
+  background-repeat: no-repeat;
+  display: block;
+}
+
+ul.juicer-feed .j-meta .facebook {
+  background-image: url(/images/facebook-icon.png);
+}
+
+ul.juicer-feed .j-meta .instagram {
+  background-image: url(/images/instagram-icon.png);
+}
+
+.j-twitter-post-icon {
+  display: none;
+}
+
+.j-message p {
+  color: #fbfbfb;
+}
+
+.j-message a {
+  color: #f1bf98;
+}
+
+.j-message a:hover {
+  color: #66a182;
+}
+
+.j-twitter-poster {
+  color: #f1bf98;
+}
+
+.j-twitter-poster:hover {
+  color: #66a182;
+}
+
+.j-poster h3 {
+  color: #f1bf98;
+}
+
+.j-poster h3:hover {
+  color: #66a182;
+}
+
+.j-meta {
+  display: none;
+}
+
+.juicer-feed.modern .j-text {
+  padding-bottom: 5px;
+}
+
+.juicer-feed.white li.feed-item.j-twitter .j-text,
+.juicer-feed.user li.feed-item.j-twitter .j-text,
+.juicer-feed.juicer-widget li.feed-item.j-twitter .j-text,
+.juicer-feed.colors li.feed-item.j-twitter .j-text,
+.juicer-feed.gray li.feed-item.j-twitter .j-text,
+.juicer-feed.modern li.feed-item.j-twitter .j-text,
+.juicer-feed.polaroid li.feed-item.j-twitter .j-text {
+  padding-bottom: 0px;
+}
