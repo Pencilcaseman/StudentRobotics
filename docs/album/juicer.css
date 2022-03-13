@@ -11,48 +11,6 @@
   color: white;
 }
 
-ul.juicer-feed .j-meta li:last-of-type {
-  display: none;
-}
-
-ul.juicer-feed .j-meta .comment {
-  font-size: 12px;
-  font-weight: bold;
-}
-
-ul.juicer-feed .j-meta .comments:before {
-  content: "";
-}
-
-ul.juicer-feed .j-meta .comments:after {
-  content: " comments";
-}
-
-.juicer-feed .j-meta {
-  border-top: 1px solid #808080;
-  padding-top: 10px;
-}
-
-ul.juicer-feed .j-meta a:before {
-  content: "";
-}
-
-ul.juicer-feed .j-meta .facebook,
-ul.juicer-feed .j-meta .instagram {
-  height: 20px;
-  width: 20px;
-  background-repeat: no-repeat;
-  display: block;
-}
-
-ul.juicer-feed .j-meta .facebook {
-  background-image: url(/images/facebook-icon.png);
-}
-
-ul.juicer-feed .j-meta .instagram {
-  background-image: url(/images/instagram-icon.png);
-}
-
 .j-twitter-post-icon {
   display: none;
 }
