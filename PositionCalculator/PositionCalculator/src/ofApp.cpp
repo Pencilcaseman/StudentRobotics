@@ -14,7 +14,7 @@ void ofApp::setup() {
 	world = World({ 100, 100 }, { 5.75, 5.75 });
 	world.populateMarkers(worldMarkers, markerError);
 
-	srRobot = Robot(&world, Vec3d(0.45, 0.45), 72);
+	srRobot = Robot(&world, Vec3d(0.40, 0.40), 72);
 	// srRobot.setPosUnknown({ world.m_pos.x + 0.5 * metreToPixel, world.m_pos.y + 0.5 * metreToPixel }, PI / 4);
 	srRobot.setPosUnknown({ world.m_pos.x + 0.5 * metreToPixel, world.m_pos.y + 0.5 * metreToPixel }, -PI / 2);
 
@@ -54,7 +54,6 @@ void ofApp::setup() {
 		{2.315265486725664,2.569690265486726}
 	};
 
-
 	for (const auto& can : canPositionsFloor) {
 		world.addCan(Can(can, false, 0.067));
 	}
@@ -62,7 +61,7 @@ void ofApp::setup() {
 	for (const auto& can : canPositionsRaised) {
 		world.addCan(Can(can, true, 0.067));
 	}
-
+		
 	srRobot.setupPathFinding(50);
 }
 
@@ -120,7 +119,7 @@ void ofApp::draw() {
 		ofDrawCircle(world.m_pos.x + world.m_size.x * metreToPixel / 2, world.m_pos.y + world.m_size.y * metreToPixel / 2, 25);
 	}
 
-	srRobot.generatePathPoints({mouseX, mouseY});
+	srRobot.generatePathPoints({ mouseX, mouseY });
 }
 
 //--------------------------------------------------------------

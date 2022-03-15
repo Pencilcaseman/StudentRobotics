@@ -10,6 +10,7 @@
 
 #include "vector.hpp"
 #include "pathfind.hpp"
+#include "utilities.hpp"
 
 // Just some stuff
 static bool showPositionDebugInfo = false;
@@ -43,14 +44,6 @@ constexpr double markerError = 0.02;
 constexpr double distanceSensorMaxRange = 2.00;
 
 static ofTrueTypeFont defaultFont;
-
-namespace librapid {
-	inline double map(double val,
-		double start1, double stop1,
-		double start2, double stop2) {
-		return start2 + (stop2 - start2) * ((val - start1) / (stop1 - start1));
-	}
-}
 
 template<typename T>
 inline const T &getGridPoint(const std::vector<std::vector<T>> &vals, int64_t index) {
@@ -970,7 +963,7 @@ public:
 		m_pathFinder.addLine(raisedEdge2.start, raisedEdge2.end, minDist);
 		m_pathFinder.addLine(raisedEdge3.start, raisedEdge3.end, minDist);
 
-		m_pathFinder.bake();
+		m_pathFinder.bake({0, 0}, {0, 0});
 	}
 
 	// THIS NEEDS TO BE OPTIMISED -- SOME STUFF HERE IS FOR DEBUGGING
@@ -1084,8 +1077,8 @@ public:
 		// }
 		*/
 
-		m_pathFinder.setTarget(row, col);
-		m_pathFinder.bake(); // This is just to update the target cell
+		m_pathFinder.setTargetCell(row, col);
+		m_pathFinder.bake({-1, -1}, {-1, -1}); // This is just to update the target cell
 
 		auto pathPoints = m_pathFinder.getPoints();
 

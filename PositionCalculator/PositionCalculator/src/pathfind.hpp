@@ -5,6 +5,7 @@
 #include <cstdint>
 
 #include "vector.hpp"
+#include "utilities.hpp"
 
 constexpr int pathFindNull = -1;
 constexpr int pathFindDefault = 0;
@@ -12,8 +13,16 @@ constexpr int pathFindInvalid = 1;
 constexpr int pathFindPath = 2;
 constexpr int pathFindTarget = 3;
 
+constexpr int64_t maxPathFindAttempts = 1000;
+
 class PathFinder {
 public:
+	struct PathFindPoint {
+		Vec2i index = {-1, -1};
+		Vec2i prev = {-1, -1};
+		double heuristic = 0;
+	};
+
 	PathFinder() = default;
 
 	/**
@@ -68,7 +77,14 @@ public:
 		return true;
 	}
 
-	void setTarget(int64_t row, int64_t col) {
+	Vec2i coordinateToIndex(const Vec3f& coord) const {
+		return {
+			(int64_t) librapid::map(coord.y, 0, m_size.y, 0, m_dims.y),
+			(int64_t) librapid::map(coord.x, 0, m_size.x, 0, m_dims.x)
+		};
+	}
+
+	void setTargetCell(int64_t row, int64_t col) {
 		if (row < 0 || row > m_dims.x - 1 || col < 0 || col > m_dims.y - 1) return;
 		m_targetCell = { row, col };
 	}
@@ -77,7 +93,7 @@ public:
 	 * Takes all avoidance points and lines and bakes the information into the $points
 	 * array, reducing the required calculations later on.
 	 */
-	void bake() {
+	void bake(const Vec3f &start, const Vec3f &target) {
 		clear();
 
 		for (auto& row : m_points) {
@@ -119,6 +135,65 @@ public:
 		// Set the target cell
 		if (m_targetCell != Vec2i{ -1, -1 })
 			m_points[m_targetCell.x][m_targetCell.y].z = pathFindTarget;
+
+		// Run the path finding algorithm
+	}
+
+	// TODO: This should probably use A*, but Djikstra will probably work just fine becuase we can lower
+	//       the resolution of the search space to something small enough to run quickly. Also, we only
+	//       have to run this once per can (theoretically) as the the path will remain the same, we just
+	//       need Jeremy to adjust his course to follow it efficiently.
+	std::vector<Vec3f> pathFind(const Vec3f& startIndex, const Vec3f& endIndex) const {
+		PathFindPoint start = {
+			startIndex.xy(), // Index
+			{-1, -1}, // Previous
+			startIndex.dist2(endIndex), // Heuristic -- distance to end point
+		};
+		
+		std::vector<PathFindPoint> pathPoints;
+		pathPoints.emplace_back(start);
+		PathFindPoint& current = start;
+		int64_t attempts = 0;
+
+		// Continue looping until we reach the target or until we run out of steps (so we don't lag Jeremy)
+		while (current.index != endIndex && attempts++ < maxPathFindAttempts) {
+			// Find the neighbours of the current cell
+			PathFindPoint left, right, up, down;
+
+			auto leftPos = current.index - Vec2i(1, 0);
+			left = {
+				leftPos,
+				current.index,
+				leftPos.dist2(endIndex)
+			};
+
+			auto rightPos = current.index + Vec2i(1, 0);
+			right = {
+				rightPos,
+				current.index,
+				rightPos.dist2(endIndex)
+			};
+
+			auto upPos = current.index - Vec2i(0, 1);
+			up = {
+				upPos,
+				current.index,
+				upPos.dist2(endIndex)
+			};
+
+			auto downPos = current.index + Vec2i(0, 1);
+			down = {
+				downPos,
+				current.index,
+				downPos.dist2(endIndex)
+			};
+
+			bool leftValid = leftPos.x >= 0;
+			bool rightValid = rightPos.x < m_dims.x;
+			bool upValid = upPos.y >= 0;
+			bool downValid = downPos.y < m_dims.y;
+
+		}
 	}
 
 	const std::vector<std::vector<Vec3f>>& getPoints() const { return m_points; }

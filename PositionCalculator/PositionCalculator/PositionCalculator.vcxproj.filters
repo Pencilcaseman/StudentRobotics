@@ -30,6 +30,7 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\pathfind.hpp" />
+    <ClInclude Include="src\utilities.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="icon.rc" />

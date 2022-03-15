@@ -186,6 +186,7 @@
   <ItemGroup>
     <ClInclude Include="src\ofApp.h" />
     <ClInclude Include="src\pathfind.hpp" />
+    <ClInclude Include="src\utilities.hpp" />
     <ClInclude Include="src\vector.hpp" />
   </ItemGroup>
   <ItemGroup>
