@@ -51,12 +51,30 @@
   padding-bottom: 5px;
 }
 
-.juicer-feed.white li.feed-item.j-twitter .j-text,
-.juicer-feed.user li.feed-item.j-twitter .j-text,
-.juicer-feed.juicer-widget li.feed-item.j-twitter .j-text,
-.juicer-feed.colors li.feed-item.j-twitter .j-text,
-.juicer-feed.gray li.feed-item.j-twitter .j-text,
-.juicer-feed.modern li.feed-item.j-twitter .j-text,
-.juicer-feed.polaroid li.feed-item.j-twitter .j-text {
+.juicer-feed.modern li.feed-item.j-twitter .j-text {
   padding-bottom: 0px;
+  padding-top: 5px;
+}
+
+.j-message p {
+  font-size: 14px;
+  font-weight: bold;
+  line-height: 20px;
+  margin-bottom: 1rem;
+}
+
+.juicer-feed.modern li.feed-item.j-twitter .j-image {
+  margin-top: 0px;
+}
+
+.juicer-feed.modern .j-poster .j-date {
+  margin-right: 7px;
+}
+
+.juicer-feed.modern .j-instagram .j-poster h3 {
+  margin-left: 12px;
+}
+
+.juicer-feed.modern li.feed-item {
+  hyphens: none;
 }
