@@ -1,0 +1,11 @@
+Smol white disc thing
+
+thickness: 2.00mm
+height: 4.90mm
+diameter: 23.90mm
+connection outer diameter: 8.92mm
+connection inner diameter: 5.62mm
+hole diameter: 2.47mm
+hole depth: 3.03mm
+short side hole inner distance: 11.72mm
+long side hole inner distance: 14.53mm
