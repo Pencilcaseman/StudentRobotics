@@ -9,13 +9,14 @@
 //================//
 // SERVO CONTROLS //
 //================//
-#define SERVO_PIN 9
-Servo servo;
+#define NUM_SERVOS 1
+Servo servo[NUM_SERVOS];
 
 void setup() {
   Serial.begin(SERIAL_BAUD);
-
-  servo.attach(SERVO_PIN);
+  for(int i = 0; i < NUM_SERVOS; i++) {
+    servo[i].attach(servo_pins[i+4]);
+  }
 }
 
 int read_pin() {
@@ -65,7 +66,9 @@ void loop() {
     // The input should be an integer in the range
     // 32 to 122 -- this gives 2deg increments
     if (selected_command >= 0 && selected_command <= 90) {
-      servo.write(selected_command * 2);
+      for(int i = 0; i < NUM_SERVOS; i++) {
+        servo[i].write(selected_command * 2);
+      }
     } else {
       // Do something different based on what we got:
       switch (selected_command) {
