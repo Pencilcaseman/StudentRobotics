@@ -1,6 +1,5 @@
-from re import M
 from sr.robot3 import *
-from j5.backends.hardware.sr.v4 import servo_board
+import servo
 import time
 
 WHEELS = {
@@ -13,6 +12,11 @@ WHEELS = {
 class Jeremy:
 	def __init__(self):
 		self.R = Robot()
+
+		servo.SERVOBOARD = self.R.ruggeduino
+
+		self.grabberServo = servo.Servo(9, 0, 600, 2400, 0, 180, True)
+		self.armServo = servo.Servo(10, 0, 500, 2500, 0, 250, True)
 
 	def drive_wheel(self, power: float, fb: str, lr: str):
 		motor = ""
@@ -59,5 +63,5 @@ class Jeremy:
 	def find_markers(self):
 		return self.R.camera.see()
 
-	def servo(self, index: int, angle: float):
-		self.R.ruggeduino.command(f"#SETANG {index}, {angle}#")
+	# def servo(self, index: int, angle: float):
+	# 	self.R.ruggeduino.command(f"#SETANG {index}, {angle}#")

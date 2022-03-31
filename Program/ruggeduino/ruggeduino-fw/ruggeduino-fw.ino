@@ -1,41 +1,99 @@
+// Documentation
+/*
+
+#ADDSERVO id, pin, angle, minDutyCycle, maxDutyCycle, minAngle, maxAngle#
+Set up a new Servo Motor
+Parameters:
+ 0: Servo ID
+ 1: Pin
+ 2: Angle = 0
+ 3: Minimum duty cycle = 600
+ 4: Maximum duty cycle = 2400
+ 5: Minimum angle = 0
+ 6: Maximum angle = 180
+
+#SETANGLE id, angle#
+Set the angle of a Servo Motor
+Parameters:
+ 0: Servo ID
+ 1: Angle
+
+#GETANGLE id#
+Get the angle of a Servo Motor
+Parameters:
+ 0: Servo ID
+
+#ENABLE id#
+Enable a Servo Motor (i.e. attach())
+Parameters:
+ 0: Servo ID
+
+#DISABLE id#
+Disable a Servo Motor (i.e. no signal)
+Parameters:
+ 0: Servo ID
+
+*/
+
+
 #include <Arduino.h>
 #include <Servo.h>
-#include <ArduinoSTL.h> // Requires "ArduinoSTL" library
+
+#include <ArduinoSTL.h> // Requires "ArduinoSTL" library => https://github.com/mike-matera/ArduinoSTL
+#include <map>
+#include <vector>
 
 // We communicate with the power board at 115200 baud.
 #define SERIAL_BAUD 115200
 #define FW_VER 1
-#define MAX_NUM_SERVOS 10
 
 // Contains everything required to control a servo
 class ServoConf {
   public:
-  
-  ServoConf() = default;
-  
-  ServoConf(int pin_,
-            float angle_,
-            float dutyCycleMin_,
-            float dutyCycleMax_,
-            float minAngle_,
-            float maxAngle_) :
+    ServoConf() = default;
+
+    ServoConf(int pin_,
+              float angle_,
+              float dutyCycleMin_,
+              float dutyCycleMax_,
+              float minAngle_,
+              float maxAngle_) :
       pin(pin_),
       angle(angle_),
       dutyCycleMin(dutyCycleMin_),
       dutyCycleMax(dutyCycleMax_),
       minAngle(minAngle_),
       maxAngle(maxAngle_) {
-    servo.attach(pin);
-  }
-  
-  int pin = -1;
-  float angle = 0;
-  float dutyCycleMin = 0;
-  float dutyCycleMax = 0;
-  float minAngle = 0;
-  float maxAngle = 0;
-  Servo servo;
+      servo.attach(pin);
+    }
+
+    void update() {
+      if (!active) return;
+      
+      int pwm = (int) map(angle, minAngle, maxAngle, dutyCycleMin, dutyCycleMax);
+      servo.writeMicroseconds(pwm);
+    }
+
+    int pin = -1;
+    float angle = 0;
+    float dutyCycleMin = 0;
+    float dutyCycleMax = 0;
+    float minAngle = 0;
+    float maxAngle = 0;
+    bool active = true;
+    Servo servo;
 };
+
+// Utility function to remove an element from a vector.
+// This could be made MUCH nicer but I really cba...
+template<typename T>
+void removeElement(std::vector<T> &vec, int index) {
+  std::vector<T> res;
+  for (int i = 0; i < vec.size(); i++) {
+    if (i != index) res.push_back(vec[i]);
+  }
+  vec.assign(res.begin(), res.end());
+}
 
 // Information about the current command
 int cmdLen = 0;
@@ -43,7 +101,8 @@ bool awaitingSentinel = false;
 String command;
 
 // An array of ServoConf objects
-ServoConf servos[MAX_NUM_SERVOS];
+std::vector<ServoConf> servos;
+std::map<int, int> servoMap;
 
 int read_pin() {
   while (!Serial.available());
@@ -79,13 +138,14 @@ void command_mode(int mode) {
   pinMode(pin, mode);
 }
 
+// Add a servo and add the servo reference in the map
+void addServo(ServoConf conf, int id) {
+  servoMap[id] = servos.size();
+  servos.push_back(conf);
+}
+
 void updateServos() {
-  for (int i = 0; i < MAX_NUM_SERVOS; i++) {
-    if (servos[i].pin == -1) continue;
-    
-    int pwm = (int) map(servos[i].angle, servos[i].minAngle, servos[i].maxAngle, servos[i].dutyCycleMin, servos[i].dutyCycleMax);
-    servos[i].servo.writeMicroseconds(pwm);
-  }
+  for (int i = 0; i < servos.size(); i++) servos[i].update();
 }
 
 // Split a string into components separated by commas. Ignore spaces
@@ -93,9 +153,9 @@ void updateServos() {
 std::vector<float> splitParams(String params) {
   std::vector<float> result;
   String current = "";
-  
+
   for (int i = 0; i < params.length(); i++) {
-    if (params[i] == ',') {      
+    if (params[i] == ',') {
       result.push_back(current.toFloat());
       current = "";
     } else if (params[i] == ' ') {
@@ -111,66 +171,152 @@ std::vector<float> splitParams(String params) {
 }
 
 void processCommand(String cmd) {
-  String setAngle = "SETANG ";
-  String getAngle = "GETANG ";
-  
+  String createServo = "ADDSERVO ";
+  String setAngle = "SETANGLE ";
+  String getAngle = "GETANGLE ";
+  String enable = "ENABLE ";
+  String disable = "DISABLE ";
+
+  if (cmd.startsWith(createServo)) {
+    // Set up a new Servo Motor
+    // Parameters:
+    //  0: Servo ID
+    //  1: Pin
+    //  2: Angle = 0
+    //  3: Minimum duty cycle = 600
+    //  4: Maximum duty cycle = 2400
+    //  5: Minimum angle = 0
+    //  6: Maximum angle = 180
+
+    int ID = 0;
+    int pin = 0;
+    float angle = 0;
+    float dutyCycleMin = 400;
+    float dutyCycleMax = 2400;
+    float minAngle = 0;
+    float maxAngle = 180;
+
+    String paramStr = cmd.substring(createServo.length());
+    std::vector<float> params = splitParams(paramStr);
+
+    if (params.size() < 2) {
+      Serial.print("INVALID COMMAND");
+      return;
+    }
+
+    // Extract the information
+    ID = (int) params[0];
+    pin = (int) params[1];
+
+    if (params.size() >= 3) angle = params[2];
+    if (params.size() >= 4) dutyCycleMin = params[3];
+    if (params.size() >= 5) dutyCycleMax = params[4];
+    if (params.size() >= 6) minAngle = params[5];
+    if (params.size() >= 7) maxAngle = params[6];
+
+    ServoConf conf(pin, angle, dutyCycleMin, dutyCycleMax, minAngle, maxAngle);
+    addServo(conf, ID);
+  }
+
   if (cmd.startsWith(setAngle)) {
     // Set the angle of a Servo Motor
     // Parameters:
-    //  0: Index
+    //  0: Servo ID
     //  1: Angle
-    
+
     String paramStr = cmd.substring(setAngle.length());
     std::vector<float> params = splitParams(paramStr);
-    
+
     if (params.size() != 2) {
       Serial.print("INVALID COMMAND");
       return;
     }
-    
-    servos[(int) params[0]].angle = params[1];
+
+    int index = servoMap[(int) params[0]];
+    servos[index].angle = params[1];
+    servos[index].active = true;
   }
 
   if (cmd.startsWith(getAngle)) {
-    // Set the angle of a Servo Motor
+    // Get the angle of a Servo Motor
     // Parameters:
-    //  0: Index
-    //  1: Angle
-    
+    //  0: Servo ID
+
     String paramStr = cmd.substring(getAngle.length());
     std::vector<float> params = splitParams(paramStr);
-    
+
     if (params.size() != 1) {
       Serial.print("INVALID COMMAND");
       return;
     }
-    
-    Serial.print(servos[(int) params[0]].angle);
+
+    int index = servoMap[(int) params[0]];
+    servos[index].active = false;
+  }
+
+  if (cmd.startsWith(enable)) {
+    // Enable a Servo Motor (i.e. attach())
+    // Parameters:
+    //  0: Servo ID
+
+    String paramStr = cmd.substring(enable.length());
+    std::vector<float> params = splitParams(paramStr);
+
+    if (params.size() != 1) {
+      Serial.print("INVALID COMMAND");
+      return;
+    }
+
+    int index = servoMap[(int) params[0]];
+    servos[index].active = true;
+    servos[index].servo.attach(servos[index].pin);
+  }
+  
+  if (cmd.startsWith(disable)) {
+    // Disable a Servo Motor (i.e. no signal)
+    // Parameters:
+    //  0: Servo ID
+
+    String paramStr = cmd.substring(disable.length());
+    std::vector<float> params = splitParams(paramStr);
+
+    if (params.size() != 1) {
+      Serial.print("INVALID COMMAND");
+      return;
+    }
+
+    int index = servoMap[(int) params[0]];
+    servos[index].active = false;
+    servos[index].servo.detach();
   }
 }
 
 void setup() {
   Serial.begin(SERIAL_BAUD);
 
-  // Config for a NORMAL servo
-  servos[0] = ServoConf(
+  /*
+    // Configuration for normal servo
+    addServo(ServoConf(
     9,
     180,
     600,
     2400,
     0,
     180
-  );
+    ), 123);
+  */
 
-  // Connfig for BIG BOI servo
-  servos[1] = ServoConf(
+  /*
+    // Configuration for Big Boi servo
+    addServo(ServoConf(
     10,
     180,
     500,
     2500,
     0,
     250
-  );
+    ), 456);
+  */
 }
 
 void loop() {
@@ -219,7 +365,7 @@ void loop() {
         cmdLen++;
       }
     } else {
-      if (awaitingSentinel) {     
+      if (awaitingSentinel) {
         // Deal with the command
         processCommand(command);
         Serial.print("\n");

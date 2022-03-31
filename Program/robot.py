@@ -21,8 +21,12 @@ time.sleep(1)
 
 start = time.time()
 while time.time() - start < 30:
-	jezza.servo(0, ((math.sin(time.time()) + 1) / 2) * 180)
-	jezza.servo(1, ((math.sin(time.time()) + 1) / 2) * 180)
+	# jezza.servo(0, ((math.sin(time.time()) + 1) / 2) * 180)
+	# jezza.servo(1, ((math.sin(time.time()) + 1) / 2) * 180)
+
+	angle = ((math.sin(time.time()) + 1) / 2) * 180
+	jezza.grabberServo.setAngle(angle)
+	jezza.armServo.setAngle(angle)
 
 
 """
