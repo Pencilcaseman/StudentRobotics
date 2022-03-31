@@ -60,27 +60,4 @@ class Jeremy:
 		return self.R.camera.see()
 
 	def servo(self, index: int, angle: float):
-		char = chr(round(angle) / 2)
-		self.R.ruggeduino.command(char)
-
-	"""
-	def direct_servo(self, index: int, val: int):
-		servo = self.R.servo_boards["sr0RY2A"].servos[index]
-		# servo._backend._positions[servo._identifier] = angle
-		servo._backend._write(servo_board.CMD_WRITE_SET_SERVO[servo._identifier], val)
-
-	def servo(self, index: int, angle: float):
-		# This is the safe way of doing things, but it doesn't work :)
-		# self.R.servo_boards["sr0RY2A"].servos[index].position = angle
-
-		# So instead we fuck with Python, Student Robotics and everyone
-		# else in order to set the servo to something other than -1 to 1
-		# haehjfehehaekfehfhehefehfahdflkfalkhfhhehahrehfeahfheahdfljfat
-		
-		servo = self.R.servo_boards["sr0RY2A"].servos[index]
-		# servo._backend.set_servo_position(servo._identifier, angle)
-		servo._backend._positions[servo._identifier] = angle
-		# value = round(angle * 100)
-		value = round(angle * 2)
-		servo._backend._write(servo_board.CMD_WRITE_SET_SERVO[servo._identifier], value)
-	"""
+		self.R.ruggeduino.command(f"#SETANG {index}, {angle}#")
