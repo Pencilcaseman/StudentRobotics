@@ -273,7 +273,3 @@ def Vec3(x, y, z):
 
 def Vec4(x, y, z, w):
     return Vector(x, y, z, w)
-
-x = Vec3(1, 2, 3)
-y = Vec3(4, 5, 6)
-print(x.dot(y))
