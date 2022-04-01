@@ -1,6 +1,5 @@
 from sr.robot3 import *
 import servo
-import time
 
 WHEELS = {
 	"fl" : ["SR0WAF", 0],
@@ -63,5 +62,23 @@ class Jeremy:
 	def find_markers(self):
 		return self.R.camera.see()
 
-	# def servo(self, index: int, angle: float):
-	# 	self.R.ruggeduino.command(f"#SETANG {index}, {angle}#")
+	def get_servo(self, servo: str):
+		if servo.lower() in ["g", "grab", "grabber", "grabberservo"]:
+			return self.grabberServo
+		elif servo.lower() in ["a", "arm", "armservo"]:
+			return self.armServo
+		else:
+			print("INVALID SERVO '{}'".format(servo))
+			return None
+
+	def set_angle(self, servo: str, angle: float):
+		self.get_servo(servo).setAngle(angle)
+	
+	def get_angle(self, servo: str):
+		return self.get_servo(servo).getAngle()
+
+	def attach(self, servo: str):
+		self.get_servo(servo).attach()
+
+	def detach(self, servo: str):
+		self.get_servo(servo).detach()
