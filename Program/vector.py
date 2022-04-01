@@ -265,11 +265,11 @@ class Vector:
     def __str__(self):
         return f"Vec({self.x}, {self.y}, {self.z}, {self.w})"
 
-def Vec2(x, y):
+def Vec2(x=0, y=0):
     return Vector(x, y, None, None)
 
-def Vec3(x, y, z):
+def Vec3(x=0, y=0, z=0):
     return Vector(x, y, z, None)
 
-def Vec4(x, y, z, w):
+def Vec4(x=0, y=0, z=0, w=0):
     return Vector(x, y, z, w)
