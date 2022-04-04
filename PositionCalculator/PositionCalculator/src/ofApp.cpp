@@ -61,7 +61,7 @@ void ofApp::setup() {
 	for (const auto& can : canPositionsRaised) {
 		world.addCan(Can(can, true, 0.067));
 	}
-		
+
 	srRobot.setupPathFinding(50);
 }
 

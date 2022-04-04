@@ -151,9 +151,7 @@ public:
 		};
 		
 		std::vector<PathFindPoint> pathPoints;
-		std::vector<PathFindPoint> openSet;
 		pathPoints.emplace_back(start);
-		openSet.emplace_back(start);
 		PathFindPoint& current = start;
 		int64_t attempts = 0;
 
@@ -195,9 +193,6 @@ public:
 			bool upValid = upPos.y >= 0;
 			bool downValid = downPos.y < m_dims.y;
 
-			if (leftValid && m_points[leftPos.x][leftPos.y] == 1) {
-				
-			}
 		}
 	}
 

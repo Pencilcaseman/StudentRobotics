@@ -1,9 +1,12 @@
+from multiprocessing.connection import answer_challenge
 from sr.robot3 import *
 import math
 
+import vector
 import servo
 import marker
-import vector
+import can
+import world
 
 WHEELS = {
 	"fl" : ["SR0WAF", 0],
@@ -20,6 +23,49 @@ class Jeremy:
 
 		self.grabberServo = servo.Servo(9, 0, 600, 2400, 0, 180, True)
 		self.armServo = servo.Servo(10, 0, 500, 2500, 0, 250, True)
+
+		self.worldView = world.World(vector.Vec3(5750, 5750))
+		self.worldView.populateMarkers(28, 0.0)
+
+		self.canPositionsFloor = (
+			vector.Vec3(2.871819690265487, 0.0477046460176991),
+			vector.Vec3(2.871819690265487, 1.1385508849557524),
+			vector.Vec3(1.6187776548672568, 1.62195796460177),
+			vector.Vec3(4.124861725663717, 1.62195796460177),
+			vector.Vec3(2.474280973451328, 1.8732024336283188),
+			vector.Vec3(3.2725387168141595, 1.8732024336283188),
+			vector.Vec3(1.876382743362832, 2.4711006637168142),
+			vector.Vec3(3.8736172566371683, 2.4711006637168142),
+			vector.Vec3(0.05088495575221239, 2.8781803097345136),
+			vector.Vec3(1.1385508849557524, 2.8781803097345136),
+			vector.Vec3(4.614629424778761, 2.8781803097345136),
+			vector.Vec3(5.705475663716815, 2.8781803097345136),
+			vector.Vec3(1.876382743362832, 3.2693584070796464),
+			vector.Vec3(3.8736172566371683, 3.2693584070796464),
+			vector.Vec3(2.474280973451328, 3.870436946902655),
+			vector.Vec3(3.2725387168141595, 3.870436946902655),
+			vector.Vec3(1.6187776548672568, 3.9563053097345136),
+			vector.Vec3(4.124861725663717, 3.9563053097345136),
+			vector.Vec3(2.871819690265487, 4.614629424778761),
+			vector.Vec3(2.871819690265487, 5.702295353982302),
+		)
+
+		self.canPositionsRaised = (
+			vector.Vec3(2.5792311946902657, 2.315265486725664),
+			vector.Vec3(3.173949115044248, 2.315265486725664),
+			vector.Vec3(3.441095132743363, 2.572870575221239),
+			vector.Vec3(3.441095132743363, 3.173949115044248),
+			vector.Vec3(3.173949115044248, 3.441095132743363),
+			vector.Vec3(2.5792311946902657, 3.441095132743363),
+			vector.Vec3(2.315265486725664, 3.173949115044248),
+			vector.Vec3(2.315265486725664, 2.569690265486726),
+		)
+
+		for canPos in self.canPositionsFloor:
+			self.worldView.addCan(can.Can(canPos, False, 0.067))
+
+		for canPos in self.canPositionsRaised:
+			self.worldView.addCan(can.Can(canPos, True, 0.067))
 
 	def drive_wheel(self, power: float, fb: str, lr: str):
 		motor = ""
@@ -60,6 +106,9 @@ class Jeremy:
 	def stop(self):
 		self.drive(0)
 
+	def see(self):
+		return self.R.camera.see()
+
 	def save_image(self, name: str):
 		return self.R.camera.save(self.R.usbkey / name)
 
@@ -76,10 +125,16 @@ class Jeremy:
 			return None
 
 	def set_angle(self, servo: str, angle: float):
-		self.get_servo(servo).setAngle(angle)
+		try:
+			self.get_servo(servo).setAngle(angle)
+		except:
+			print("[ ERROR ] hlep")
 	
 	def get_angle(self, servo: str):
-		return self.get_servo(servo).getAngle()
+		try:
+			return self.get_servo(servo).getAngle()
+		except:
+			print("[ ERROR ] hleep")
 
 	def attach(self, servo: str):
 		self.get_servo(servo).attach()
@@ -105,8 +160,8 @@ class Jeremy:
 		alpha = math.pi - alpha
 		
 		gamma = math.pi - alpha - beta
-		theta = math.asin(D2 * math.sin(gamma)) * invMd
-		mu = math.asin(D1 * math.sin(gamma)) * invMd
+		theta = math.asin(D2 * math.sin(gamma) * invMd)
+		mu = math.asin(D1 * math.sin(gamma) * invMd)
 		
 		# TODO: Create worldview
 		worldspaceMarker1 = self.worldView.idealMarkerPosition(marker1.id)
@@ -129,3 +184,28 @@ class Jeremy:
 			worldPosTrue = worldPosM2
 		
 		return worldPosTrue, tau + kappa - (math.pi / 2)
+
+	def calculateWorldspacePosition(self):
+		visible = self.see()
+
+		self.save_image("i_see_u.png")
+		for seen in visible:
+			print(f"[ VISIBLE ] Cartesian: {seen.cartesian} | ID: {seen.id}")
+
+		if len(visible) < 2: return None, None
+
+		sumPos = vector.Vec3(0, 0, 0)
+		theta = 0
+
+		for i in range(len(visible) - 1):
+			coord1 = visible[i].cartesian
+			coord2 = visible[i + 1].cartesian
+			marker1 = marker.Marker(vector.Vec3(coord1.x, coord1.z), visible[i].id)
+			marker2 = marker.Marker(vector.Vec3(coord2.x, coord2.z), visible[i + 1].id)
+			pos, angle = self.computeRelativePosition(marker1, marker2)
+			sumPos += pos
+			theta = angle
+
+		truePos = sumPos / (len(visible) - 1)
+		trueAngle = theta + (math.pi * 2 if theta < -math.pi else 0)
+		return truePos, trueAngle

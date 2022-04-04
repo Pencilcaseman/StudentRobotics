@@ -19,9 +19,11 @@ jezza.drive_wheel(0.1, "back", "right")
 time.sleep(1)
 
 
+print("CALCULATING POSITION")
+print(jezza.calculateWorldspacePosition())
+
 start = time.time()
 while time.time() - start < 30:
-
 	angle = ((math.sin(time.time()) + 1) / 2) * 180
 	jezza.set_angle("grabber", angle)
 	jezza.set_angle("arm", angle)

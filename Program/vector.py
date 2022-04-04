@@ -133,16 +133,16 @@ class Vector:
     def iarithmetic(self, other, op):
         if isinstance(other, Vector):
             # Vector addition
-            self.x = op(self.x, other.x)
-            self.y = op(self.y, other.y)
-            self.z = op(self.z, other.z)
-            self.w = op(self.w, other.w)
+            self._x = op(self.x, other.x)
+            self._y = op(self.y, other.y)
+            self._z = op(self.z, other.z)
+            self._w = op(self.w, other.w)
         elif isinstance(other, (int, float, bool)):
             # Scalar addition
-            self.x = op(self.x, other)
-            self.y = op(self.y, other)
-            self.z = op(self.z, other)
-            self.w = op(self.w, other)
+            self._x = op(self.x, other)
+            self._y = op(self.y, other)
+            self._z = op(self.z, other)
+            self._w = op(self.w, other)
         else:
             raise TypeError("Can only apply arithmetic operation to a Vector or Scalar")
 
