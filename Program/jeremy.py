@@ -192,10 +192,8 @@ class Jeremy:
 
     def calculateWorldspacePosition(self):
         markers = self.see()
-
-        if (self.debug):
-            for seen in markers:
-                self.log(f"[ VISIBLE ] Cartesian: {seen.cartesian} | ID: {seen.id}")
+        for seen in markers:
+            self.log(f"[ VISIBLE ] Cartesian: {seen.cartesian} | ID: {seen.id}")
 
         if len(markers) < 2:
             return None, None
