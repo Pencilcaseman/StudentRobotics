@@ -9,24 +9,12 @@ jezza = Jeremy()
 # for marker in jezza.find_markers():
 # 	print(marker, " | [ CARTESIAN ]", marker.cartesian)
 
-jezza.drive_wheel(0.1, "front", "left")
-time.sleep(1)
-jezza.drive_wheel(0.1, "front", "right")
-time.sleep(1)
-jezza.drive_wheel(0.1, "back", "left")
-time.sleep(1)
-jezza.drive_wheel(0.1, "back", "right")
-time.sleep(1)
-
-
-print("CALCULATING POSITION")
-print(jezza.calculateWorldspacePosition())
-
 start = time.time()
-while time.time() - start < 30:
-	angle = ((math.sin(time.time()) + 1) / 2) * 180
-	jezza.set_angle("grabber", angle)
-	jezza.set_angle("arm", angle)
+while time.time() - start < 10:
+	jezza.drive(0)
+	print(jezza.calculateWorldspacePosition())
+	jezza.drive(0.3)
+	time.sleep(2)
 
 
 """

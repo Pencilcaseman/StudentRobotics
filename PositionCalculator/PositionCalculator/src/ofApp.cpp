@@ -18,6 +18,7 @@ void ofApp::setup() {
 	// srRobot.setPosUnknown({ world.m_pos.x + 0.5 * metreToPixel, world.m_pos.y + 0.5 * metreToPixel }, PI / 4);
 	srRobot.setPosUnknown({ world.m_pos.x + 0.5 * metreToPixel, world.m_pos.y + 0.5 * metreToPixel }, -PI / 2);
 
+	/*
 	// Add a single can to the world
 	std::vector<Vec3d> canPositionsFloor = {
 		// WRONG ORIENTATION
@@ -52,6 +53,47 @@ void ofApp::setup() {
 		{2.5792311946902657,3.441095132743363},
 		{2.315265486725664,3.173949115044248},
 		{2.315265486725664,2.569690265486726}
+	};
+	*/
+	
+	// Add a single can to the world
+	std::vector<Vec3d> canPositionsFloor = {
+		// Edge pieces
+		{5.75 / 2, 0.067 / 2}, // Top centre
+		{0.067 / 2, 5.75 / 2}, // Left centre
+		{5.75 - 0.067 / 2, 5.75 / 2}, // Right centre
+		{2.875, 5.75 - 0.067 / 2}, // Bottom centre
+
+		// Outer Octagon
+		{5.75 / 2, 5.75 / 2 - 1.14 - 0.6}, // Up from centre
+		{5.75 / 2 - 1.14 - 0.6, 5.75 / 2}, // Left of centre
+		{5.75 / 2 + 1.14 + 0.6, 5.75 / 2}, // Right of centre
+		{5.75 / 2, 5.75 / 2 + 1.14 + 0.6}, // Down from centre
+		{5.75 / 2 - 0.65 - 0.6, 5.75 / 2 - 0.65 - 0.6}, // Diagonally up and left
+		{5.75 / 2 + 0.65 + 0.6, 5.75 / 2 - 0.65 - 0.6}, // Diagonally up and right
+		{5.75 / 2 - 0.65 - 0.6, 5.75 / 2 + 0.65 + 0.6}, // Diagonally down and left
+		{5.75 / 2 + 0.65 + 0.6, 5.75 / 2 + 0.65 + 0.6}, // Diagonally down and right
+
+		// Inner octagon
+		{5.75 / 2 - 0.4, 5.75 / 2 - 0.4 - 0.6}, // Up and left
+		{5.75 / 2 + 0.4, 5.75 / 2 - 0.4 - 0.6}, // Up and right
+		{5.75 / 2 - 0.4 - 0.6, 5.75 / 2 - 0.4}, // Left and up
+		{5.75 / 2 - 0.4 -0.6, 5.75 / 2 + 0.4}, // Left and down
+		{5.75 / 2 + 0.4 + 0.6, 5.75 / 2 - 0.4}, // Right and up
+		{5.75 / 2 + 0.4 + 0.6, 5.75 / 2 + 0.4}, // Right and down
+		{5.75 / 2 - 0.4, 5.75 / 2 + 0.4 + 0.6}, // Down and left
+		{5.75 / 2 + 0.4, 5.75 / 2 + 0.4 + 0.6}, // Down and right
+	};
+
+	std::vector<Vec3d> canPositionsRaised = {
+		{5.75 / 2 - 0.6 + 0.3, 5.75 / 2 - 0.6 + 0.067 / 2}, // Up and left
+		{5.75 / 2 + 0.6 - 0.3, 5.75 / 2 - 0.6 + 0.067 / 2}, // Up and right
+		{5.75 / 2 - 0.6 + 0.067 / 2, 5.75 / 2 - 0.6 + 0.3}, // Left and up
+		{5.75 / 2 - 0.6 + 0.067 / 2, 5.75 / 2 + 0.6 - 0.3}, // Left and down
+		{5.75 / 2 + 0.6 - 0.067 / 2, 5.75 / 2 - 0.6 + 0.3}, // Right and up
+		{5.75 / 2 + 0.6 - 0.067 / 2, 5.75 / 2 + 0.6 - 0.3}, // Right and down
+		{5.75 / 2 - 0.6 + 0.3, 5.75 / 2 + 0.6 - 0.067 / 2}, // Down and left
+		{5.75 / 2 + 0.6 - 0.3, 5.75 / 2 + 0.6 - 0.067 / 2}, // Down and right
 	};
 
 	for (const auto& can : canPositionsFloor) {
