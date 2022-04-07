@@ -1,11 +1,6 @@
 from sr.robot3 import *
-import math
-
-import vector
-import servo
-import marker
-import can
-import world
+import math, time
+import vector, servo, marker, can, world
 
 WHEELS = {
     "fl": ["SR0WAF", 0],
@@ -211,6 +206,9 @@ class Jeremy:
         truePos = sumPos / (len(markers) - 1)
         trueAngle = theta + (math.pi * 2 if theta < -math.pi else 0)
         return truePos, trueAngle
+
+    def sleep(self, t: float):
+        time.sleep(t)
 
     def log(self, msg: str):
         if (self.debug):
