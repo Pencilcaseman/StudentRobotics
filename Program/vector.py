@@ -1,5 +1,4 @@
 from functools import reduce
-from itertools import accumulate
 import math
 
 class Vector:
