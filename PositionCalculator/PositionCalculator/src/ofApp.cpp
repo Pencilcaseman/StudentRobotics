@@ -97,10 +97,14 @@ void ofApp::setup() {
 	};
 
 	for (const auto& can : canPositionsFloor) {
+		std::cout << can << "\n";
 		world.addCan(Can(can, false, 0.067));
 	}
 
+	std::cout << "\n\n\n";
+
 	for (const auto& can : canPositionsRaised) {
+		std::cout << can << "\n";
 		world.addCan(Can(can, true, 0.067));
 	}
 
