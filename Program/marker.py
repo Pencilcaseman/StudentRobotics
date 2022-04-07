@@ -26,6 +26,9 @@ public:
 
 import vector
 
+def fromSrMarker(srmarker):
+	return Marker(vector.Vec3(srmarker.cartesian.x, srmarker.cartesian.z), srmarker.id)
+
 class Marker:
     def __init__(self, cartesian, id = -1):
         self.cartesian = cartesian       # Cartesian coordinate (worldspace OR relative)
