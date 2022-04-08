@@ -88,8 +88,8 @@ class Jeremy:
         try:
             self.R.motor_boards[WHEELS[motor][0]
                                 ].motors[WHEELS[motor][1]].power = power
-        except Exception as error:
-            self.error("Error while driving wheel:" + str(error))
+        except Exception as e:
+            self.error(f"Error while driving wheel: {str(e)}")
 
     def drive(self, power: float):
         self.drive_wheel(power, "front", "left")
@@ -127,14 +127,23 @@ class Jeremy:
     def set_angle(self, servo: str, angle: float):
         try:
             self.get_servo(servo).setAngle(angle)
-        except:
-            self.error("Error while setting angle")
+        except Exception as e:
+            self.error(f"Error while setting angle: {str(e)}")
 
     def get_angle(self, servo: str):
         try:
             return self.get_servo(servo).getAngle()
-        except:
-            self.error("Error while getting angle")
+        except Exception as e:
+            self.error(f"Error while getting angle: {str(e)}")
+
+    def get_rot(self):
+        try:
+            res = [float(i) for i in self.R.ruggeduino.command("#GETROT#").split(" ")]
+            vec = vector.Vec3(res[0], res[1], res[2])
+            self.log(f"Recieved vector {str(vec)}")
+            return vec
+        except Exception as e:
+            self.error(f"Error while getting rotation: {str(e)}")
 
     def attach(self, servo: str):
         self.get_servo(servo).attach()
@@ -214,12 +223,12 @@ class Jeremy:
 
     def log(self, msg: str):
         if (self.debug):
-            print("[ INFO ] " + msg)
+            print("[ INFO ] " + str(msg))
 
     def warn(self, msg: str):
         if (self.debug):
-            print("[ WARN ] " + msg)
+            print("[ WARN ] " + str(msg))
 
     def error(self, msg: str):
-        print("[ ERROR ] " + msg)
+        print("[ ERROR ] " + str(msg))
 

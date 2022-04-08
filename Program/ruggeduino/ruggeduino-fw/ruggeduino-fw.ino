@@ -1,6 +1,15 @@
 // Documentation
-/*
 
+// FOR GYROSCOPE:
+// THIS CANNOT BE CHANGED:
+// VCC to 5,
+// GND to GND,
+// SCL to A5,
+// SDA to A4,
+// ADO to GND,
+// INT to digital pin 2.
+
+/*
 #ADDSERVO id, pin, angle, minDutyCycle, maxDutyCycle, minAngle, maxAngle#
 Set up a new Servo Motor
 Parameters:
@@ -38,6 +47,7 @@ Parameters:
 
 #include <Arduino.h>
 #include <Servo.h>
+#include<Wire.h>
 
 #include <ArduinoSTL.h> // Requires "ArduinoSTL" library => https://github.com/mike-matera/ArduinoSTL
 #include <map>
@@ -46,6 +56,12 @@ Parameters:
 // We communicate with the power board at 115200 baud.
 #define SERIAL_BAUD 115200
 #define FW_VER 1
+
+const int MPU_addr = 0x68;
+int16_t AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ;
+const int minVal = 265;
+const int maxVal = 402;
+double rotX, rotY, rotZ;
 
 // Contains everything required to control a servo
 class ServoConf {
@@ -176,6 +192,7 @@ void processCommand(String cmd) {
   String getAngle = "GETANGLE ";
   String enable = "ENABLE ";
   String disable = "DISABLE ";
+  String getRot = "GETROT";
 
   if (cmd.startsWith(createServo)) {
     // Set up a new Servo Motor
@@ -254,6 +271,29 @@ void processCommand(String cmd) {
     servos[index].active = false;
   }
 
+  if (cmd.startsWith(getRot)) {
+    Wire.beginTransmission(MPU_addr);
+    Wire.write(0x3B);
+    Wire.endTransmission(false);
+    Wire.requestFrom(MPU_addr, 14, true);
+    AcX = Wire.read() << 8 | Wire.read();
+    AcY = Wire.read() << 8 | Wire.read();
+    AcZ = Wire.read() << 8 | Wire.read();
+    int xAng = map(AcX, minVal, maxVal, -90, 90);
+    int yAng = map(AcY, minVal, maxVal, -90, 90);
+    int zAng = map(AcZ, minVal, maxVal, -90, 90);
+  
+    rotX = RAD_TO_DEG * (atan2(-yAng, -zAng) + PI);
+    rotY = RAD_TO_DEG * (atan2(-xAng, -zAng) + PI);
+    rotZ = RAD_TO_DEG * (atan2(-yAng, -xAng) + PI);
+
+    Serial.print(rotX);
+    Serial.print(" ");
+    Serial.print(rotY);
+    Serial.print(" ");
+    Serial.print(rotZ);
+  }
+
   if (cmd.startsWith(enable)) {
     // Enable a Servo Motor (i.e. attach())
     // Parameters:
@@ -292,6 +332,11 @@ void processCommand(String cmd) {
 }
 
 void setup() {
+  Wire.begin();
+  Wire.beginTransmission(MPU_addr);
+  Wire.write(0x6B);
+  Wire.write(0);
+  Wire.endTransmission(true);
   Serial.begin(SERIAL_BAUD);
 
   /*
