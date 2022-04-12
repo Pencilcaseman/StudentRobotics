@@ -2,7 +2,7 @@
 
 // FOR GYROSCOPE:
 // THIS CANNOT BE CHANGED:
-// VCC to 5,
+// VCC to 5V,
 // GND to GND,
 // SCL to A5,
 // SDA to A4,
@@ -10,37 +10,37 @@
 // INT to digital pin 2.
 
 /*
-#ADDSERVO id, pin, angle, minDutyCycle, maxDutyCycle, minAngle, maxAngle#
-Set up a new Servo Motor
-Parameters:
- 0: Servo ID
- 1: Pin
- 2: Angle = 0
- 3: Minimum duty cycle = 600
- 4: Maximum duty cycle = 2400
- 5: Minimum angle = 0
- 6: Maximum angle = 180
+  #ADDSERVO id, pin, angle, minDutyCycle, maxDutyCycle, minAngle, maxAngle#
+  Set up a new Servo Motor
+  Parameters:
+  0: Servo ID
+  1: Pin
+  2: Angle = 0
+  3: Minimum duty cycle = 600
+  4: Maximum duty cycle = 2400
+  5: Minimum angle = 0
+  6: Maximum angle = 180
 
-#SETANGLE id, angle#
-Set the angle of a Servo Motor
-Parameters:
- 0: Servo ID
- 1: Angle
+  #SETANGLE id, angle#
+  Set the angle of a Servo Motor
+  Parameters:
+  0: Servo ID
+  1: Angle
 
-#GETANGLE id#
-Get the angle of a Servo Motor
-Parameters:
- 0: Servo ID
+  #GETANGLE id#
+  Get the angle of a Servo Motor
+  Parameters:
+  0: Servo ID
 
-#ENABLE id#
-Enable a Servo Motor (i.e. attach())
-Parameters:
- 0: Servo ID
+  #ENABLE id#
+  Enable a Servo Motor (i.e. attach())
+  Parameters:
+  0: Servo ID
 
-#DISABLE id#
-Disable a Servo Motor (i.e. no signal)
-Parameters:
- 0: Servo ID
+  #DISABLE id#
+  Disable a Servo Motor (i.e. no signal)
+  Parameters:
+  0: Servo ID
 
 */
 
@@ -61,7 +61,10 @@ const int MPU_addr = 0x68;
 int16_t AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ;
 const int minVal = 265;
 const int maxVal = 402;
-double rotX, rotY, rotZ;
+float rotX, rotY, rotZ;
+
+#define NUM_POINTS 20
+float rotationPoints[NUM_POINTS];
 
 // Contains everything required to control a servo
 class ServoConf {
@@ -85,7 +88,7 @@ class ServoConf {
 
     void update() {
       if (!active) return;
-      
+
       int pwm = (int) map(angle, minAngle, maxAngle, dutyCycleMin, dutyCycleMax);
       servo.writeMicroseconds(pwm);
     }
@@ -275,17 +278,21 @@ void processCommand(String cmd) {
     Wire.beginTransmission(MPU_addr);
     Wire.write(0x3B);
     Wire.endTransmission(false);
-    Wire.requestFrom(MPU_addr, 14, true);
+    Wire.requestFrom(MPU_addr, 12, true);
     AcX = Wire.read() << 8 | Wire.read();
     AcY = Wire.read() << 8 | Wire.read();
     AcZ = Wire.read() << 8 | Wire.read();
-    int xAng = map(AcX, minVal, maxVal, -90, 90);
-    int yAng = map(AcY, minVal, maxVal, -90, 90);
-    int zAng = map(AcZ, minVal, maxVal, -90, 90);
-  
-    rotX = RAD_TO_DEG * (atan2(-yAng, -zAng) + PI);
-    rotY = RAD_TO_DEG * (atan2(-xAng, -zAng) + PI);
-    rotZ = RAD_TO_DEG * (atan2(-yAng, -xAng) + PI);
+    GyX = Wire.read() << 8 | Wire.read();
+    GyY = Wire.read() << 8 | Wire.read();
+    GyZ = Wire.read() << 8 | Wire.read();
+
+    // int xAng = map(GyX, minVal, maxVal, -90, 90);
+    // int yAng = map(GyY, minVal, maxVal, -90, 90);
+    // int zAng = map(GyZ, minVal, maxVal, -90, 90);
+
+    // rotX = RAD_TO_DEG * (atan2(-yAng, -zAng) + PI);
+    // rotY = RAD_TO_DEG * (atan2(-xAng, -zAng) + PI);
+    // rotZ = RAD_TO_DEG * (atan2(-yAng, -xAng) + PI);
 
     Serial.print(rotX);
     Serial.print(" ");
@@ -311,7 +318,7 @@ void processCommand(String cmd) {
     servos[index].active = true;
     servos[index].servo.attach(servos[index].pin);
   }
-  
+
   if (cmd.startsWith(disable)) {
     // Disable a Servo Motor (i.e. no signal)
     // Parameters:
@@ -331,6 +338,13 @@ void processCommand(String cmd) {
   }
 }
 
+float getRotZ() {
+  float total = 0;
+  for (int i = 0; i < NUM_POINTS; ++i)
+    total += rotationPoints[i];
+  return total / NUM_POINTS;
+}
+
 void setup() {
   Wire.begin();
   Wire.beginTransmission(MPU_addr);
@@ -338,33 +352,31 @@ void setup() {
   Wire.write(0);
   Wire.endTransmission(true);
   Serial.begin(SERIAL_BAUD);
-
-  /*
-    // Configuration for normal servo
-    addServo(ServoConf(
-    9,
-    180,
-    600,
-    2400,
-    0,
-    180
-    ), 123);
-  */
-
-  /*
-    // Configuration for Big Boi servo
-    addServo(ServoConf(
-    10,
-    180,
-    500,
-    2500,
-    0,
-    250
-    ), 456);
-  */
 }
 
 void loop() {
+  Wire.beginTransmission(MPU_addr);
+  Wire.write(0x3B);
+  Wire.endTransmission(false);
+  Wire.requestFrom(MPU_addr, 14, true);
+  AcX = Wire.read() << 8 | Wire.read();
+  AcY = Wire.read() << 8 | Wire.read();
+  AcZ = Wire.read() << 8 | Wire.read();
+
+  float xAng = map(AcX, minVal, maxVal, -90, 90);
+  float yAng = map(AcY, minVal, maxVal, -90, 90);
+  float zAng = map(AcZ, minVal, maxVal, -90, 90);
+
+  rotX = RAD_TO_DEG * (atan2(-yAng, -zAng) + PI);
+  rotY = RAD_TO_DEG * (atan2(-xAng, -zAng) + PI);
+  rotZ = RAD_TO_DEG * (atan2(-yAng, -xAng) + PI);
+
+  for (int i = 0; i < NUM_POINTS - 1; ++i)
+    rotationPoints[i] = rotationPoints[i + 1];
+  rotationPoints[NUM_POINTS - 1] = rotY;
+
+  Serial.println(rotY);
+
   // Fetch all commands in the buffer, separated by a "#"
   while (Serial.available()) {
     char nextChar = Serial.read();

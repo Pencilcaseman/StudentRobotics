@@ -1,3 +1,13 @@
+"""
+Main Arm Servo:
+180 deg = Front
+0 deg = Back
+
+Grabber Arm Servo:
+0 deg = Grab can
+20 deg = Open
+"""
+
 from sr.robot3 import *
 import math, time
 import vector, servo, marker, can, world
@@ -14,10 +24,15 @@ class Jeremy:
     def __init__(self, debug: bool):
         self.R = Robot()
 
+        """
         servo.SERVOBOARD = self.R.ruggeduino
 
-        self.grabberServo = servo.Servo(9, 0, 600, 2400, 0, 180, True)
-        self.armServo = servo.Servo(10, 0, 500, 2500, 0, 250, True)
+        self.grabberServo = servo.Servo(10, 0, 600, 2400, 0, 180, True)
+        self.armServo = servo.Servo(9, 0, 500, 2500, 0, 250, True)
+
+        self.grabberServo.setAngle(40)
+        self.armServo.setAngle(180)
+        """
 
         self.worldView = world.World(vector.Vec3(5750, 5750))
         self.worldView.populateMarkers(28, 0.0)
@@ -103,6 +118,13 @@ class Jeremy:
         self.drive_wheel(power, "back", "left")
         self.drive_wheel(-power, "back", "right")
 
+    def turn_angle(self, angle: float, power: float):
+        startRot = self.get_rot().x
+        self.turn(power)
+        while abs(self.get_rot().x + angle - startRot) > 5:   
+            self.warn("Diff: " + str(abs(self.get_rot().x + angle - startRot)))
+        self.turn(0)
+
     def stop(self):
         self.drive(0)
 
@@ -140,7 +162,7 @@ class Jeremy:
         try:
             res = [float(i) for i in self.R.ruggeduino.command("#GETROT#").split(" ")]
             vec = vector.Vec3(res[0], res[1], res[2])
-            self.log(f"Recieved vector {str(vec)}")
+            self.log(f"Received vector {str(vec)}")
             return vec
         except Exception as e:
             self.error(f"Error while getting rotation: {str(e)}")
