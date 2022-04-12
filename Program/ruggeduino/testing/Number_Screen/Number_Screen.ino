@@ -1,4 +1,4 @@
-const int segmentPins[8] = {0, 8, 7, 6, 5, 4, 3, 2}; //dp, G, F, E, D, C, B, A
+const int segmentPins[8] = {13, 8, 7, 6, 5, 4, 3, 2}; // dp, G, F, E, D, C, B, A
 const int digitPins[4] = {9, 10, 11, 12};  // digits 1, 2, 3, 4
 const int numeral[10] = {
   B11111100, //0
@@ -14,6 +14,7 @@ const int numeral[10] = {
 };
 
 int number = 3462;
+int dot = 2;
 
 int pown(int x, unsigned p) {
   int result = 1;
@@ -26,11 +27,19 @@ int pown(int x, unsigned p) {
 }
 
 void showDigit(int number, int digit) {
-  for (int segment = 1; segment < 8; segment++) digitalWrite(segmentPins[segment], LOW);
+  for (int segment = 0; segment < 8; segment++) digitalWrite(segmentPins[segment], LOW);
   for (int i = 0; i < 4; i++) digitalWrite(digitPins[i], HIGH);
 
   digitalWrite(digitPins[digit], LOW);
+  digitalWrite(segmentPins[0], digit == dot);
   for (int segment = 1; segment < 8; segment++) digitalWrite(segmentPins[segment], bitRead(numeral[number], segment));
+}
+
+void updateDisplay() {
+  for (int digit = 0; digit < 4; digit++) {
+    showDigit((number / pown(10, 3 - digit)) % 10, digit);
+    delayMicroseconds(10);
+  }
 }
 
 void setup() {
@@ -42,8 +51,5 @@ void setup() {
 }
 
 void loop() {
-  for (int digit = 0; digit < 4; digit++) {
-    showDigit((number / pown(10, 3 - digit)) % 10, digit);
-    delayMicroseconds(10);
-  }
+  updateDisplay();
 }
