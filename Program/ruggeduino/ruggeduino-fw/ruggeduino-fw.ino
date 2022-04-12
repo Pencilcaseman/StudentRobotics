@@ -1,14 +1,5 @@
 // Documentation
 
-// FOR GYROSCOPE:
-// THIS CANNOT BE CHANGED:
-// VCC to 5V,
-// GND to GND,
-// SCL to A5,
-// SDA to A4,
-// ADO to GND,
-// INT to digital pin 2.
-
 /*
   #ADDSERVO id, pin, angle, minDutyCycle, maxDutyCycle, minAngle, maxAngle#
   Set up a new Servo Motor
@@ -44,10 +35,8 @@
 
 */
 
-
 #include <Arduino.h>
 #include <Servo.h>
-#include<Wire.h>
 
 #include <ArduinoSTL.h> // Requires "ArduinoSTL" library => https://github.com/mike-matera/ArduinoSTL
 #include <map>
@@ -56,15 +45,6 @@
 // We communicate with the power board at 115200 baud.
 #define SERIAL_BAUD 115200
 #define FW_VER 1
-
-const int MPU_addr = 0x68;
-int16_t AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ;
-const int minVal = 265;
-const int maxVal = 402;
-float rotX, rotY, rotZ;
-
-#define NUM_POINTS 20
-float rotationPoints[NUM_POINTS];
 
 // Contains everything required to control a servo
 class ServoConf {
@@ -195,7 +175,6 @@ void processCommand(String cmd) {
   String getAngle = "GETANGLE ";
   String enable = "ENABLE ";
   String disable = "DISABLE ";
-  String getRot = "GETROT";
 
   if (cmd.startsWith(createServo)) {
     // Set up a new Servo Motor
@@ -257,50 +236,6 @@ void processCommand(String cmd) {
     servos[index].active = true;
   }
 
-  if (cmd.startsWith(getAngle)) {
-    // Get the angle of a Servo Motor
-    // Parameters:
-    //  0: Servo ID
-
-    String paramStr = cmd.substring(getAngle.length());
-    std::vector<float> params = splitParams(paramStr);
-
-    if (params.size() != 1) {
-      Serial.print("INVALID COMMAND");
-      return;
-    }
-
-    int index = servoMap[(int) params[0]];
-    servos[index].active = false;
-  }
-
-  if (cmd.startsWith(getRot)) {
-    Wire.beginTransmission(MPU_addr);
-    Wire.write(0x3B);
-    Wire.endTransmission(false);
-    Wire.requestFrom(MPU_addr, 12, true);
-    AcX = Wire.read() << 8 | Wire.read();
-    AcY = Wire.read() << 8 | Wire.read();
-    AcZ = Wire.read() << 8 | Wire.read();
-    GyX = Wire.read() << 8 | Wire.read();
-    GyY = Wire.read() << 8 | Wire.read();
-    GyZ = Wire.read() << 8 | Wire.read();
-
-    // int xAng = map(GyX, minVal, maxVal, -90, 90);
-    // int yAng = map(GyY, minVal, maxVal, -90, 90);
-    // int zAng = map(GyZ, minVal, maxVal, -90, 90);
-
-    // rotX = RAD_TO_DEG * (atan2(-yAng, -zAng) + PI);
-    // rotY = RAD_TO_DEG * (atan2(-xAng, -zAng) + PI);
-    // rotZ = RAD_TO_DEG * (atan2(-yAng, -xAng) + PI);
-
-    Serial.print(rotX);
-    Serial.print(" ");
-    Serial.print(rotY);
-    Serial.print(" ");
-    Serial.print(rotZ);
-  }
-
   if (cmd.startsWith(enable)) {
     // Enable a Servo Motor (i.e. attach())
     // Parameters:
@@ -338,45 +273,12 @@ void processCommand(String cmd) {
   }
 }
 
-float getRotZ() {
-  float total = 0;
-  for (int i = 0; i < NUM_POINTS; ++i)
-    total += rotationPoints[i];
-  return total / NUM_POINTS;
-}
-
 void setup() {
-  Wire.begin();
-  Wire.beginTransmission(MPU_addr);
-  Wire.write(0x6B);
-  Wire.write(0);
-  Wire.endTransmission(true);
   Serial.begin(SERIAL_BAUD);
+  while (!Serial);
 }
 
 void loop() {
-  Wire.beginTransmission(MPU_addr);
-  Wire.write(0x3B);
-  Wire.endTransmission(false);
-  Wire.requestFrom(MPU_addr, 14, true);
-  AcX = Wire.read() << 8 | Wire.read();
-  AcY = Wire.read() << 8 | Wire.read();
-  AcZ = Wire.read() << 8 | Wire.read();
-
-  float xAng = map(AcX, minVal, maxVal, -90, 90);
-  float yAng = map(AcY, minVal, maxVal, -90, 90);
-  float zAng = map(AcZ, minVal, maxVal, -90, 90);
-
-  rotX = RAD_TO_DEG * (atan2(-yAng, -zAng) + PI);
-  rotY = RAD_TO_DEG * (atan2(-xAng, -zAng) + PI);
-  rotZ = RAD_TO_DEG * (atan2(-yAng, -xAng) + PI);
-
-  for (int i = 0; i < NUM_POINTS - 1; ++i)
-    rotationPoints[i] = rotationPoints[i + 1];
-  rotationPoints[NUM_POINTS - 1] = rotY;
-
-  Serial.println(rotY);
-
   // Fetch all commands in the buffer, separated by a "#"
   while (Serial.available()) {
     char nextChar = Serial.read();
