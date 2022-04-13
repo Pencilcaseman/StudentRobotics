@@ -235,6 +235,23 @@ void processCommand(String cmd) {
     servos[index].active = true;
   }
 
+  if (cmd.startsWith(getAngle)) {
+    // Get the angle of a Servo Motor
+    // Parameters:
+    //  0: Servo ID
+
+    String paramStr = cmd.substring(getAngle.length());
+    std::vector<float> params = splitParams(paramStr);
+
+    if (params.size() != 1) {
+      Serial.print("INVALID COMMAND");
+      return;
+    }
+
+    int index = servoMap[(int) params[0]];
+    servos[index].active = false;
+  }
+
   if (cmd.startsWith(enable)) {
     // Enable a Servo Motor (i.e. attach())
     // Parameters:
