@@ -1,37 +1,29 @@
-"""
-class Marker {
-public:
-	// NOTE: Some information is not stored. This is to make the program simpler
-
-	Marker() : id(-1), distance(-1), cartesian({ 0, 0 }) {}
-
-	Marker(Vec3d cartesian, int64_t id = -1)
-		: cartesian(cartesian), distance(cartesian.mag()), id(id) {}
-
-	Marker(const Marker& other)
-		: id(other.id), distance(other.distance), cartesian(other.cartesian) {}
-
-	Marker& operator=(const Marker& other) {
-		id = other.id;
-		distance = other.distance;
-		cartesian = other.cartesian;
-		return *this;
-	}
-
-	int64_t id; // The ID of the marker
-	double distance; // Distance from camera to marker
-	Vec3d cartesian; // A Vec3d instance describing the absolute position of the marker relative to the camera
-};
-"""
-
 import vector
 
 def fromSrMarker(srmarker):
+	"""
+	Create a marker.Marker object from an sr.marker object.
+
+	> srmarker - The sr.marker object to convert.
+	"""
+
 	return Marker(vector.Vec3(srmarker.cartesian.x, srmarker.cartesian.z), srmarker.id)
 
 class Marker:
-    def __init__(self, cartesian, id = -1):
-        self.cartesian = cartesian       # Cartesian coordinate (worldspace OR relative)
-        self.id = id                     # Marker ID
-        self.distance = cartesian.mag()  # Distance from camera to marker (when using relative coordinate space)
+	"""
+	Stores information about a marker.
+	"""
+
+	def __init__(self, cartesian: vector.Vector, id: int = -1):
+		"""
+		Create a marker using a position and an ID.
+
+		> cartesian: vector.Vector - The position of the marker.
+
+		> id: int (-1) - The id of the marker.
+		"""
+
+		self.cartesian = cartesian       # Cartesian coordinate (worldspace OR relative)
+		self.id = id                     # Marker ID
+		self.distance = cartesian.mag()  # Distance from camera to marker (when using relative coordinate space)
      

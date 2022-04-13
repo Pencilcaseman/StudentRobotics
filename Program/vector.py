@@ -2,6 +2,10 @@ from functools import reduce
 import math
 
 class Vector:
+    """
+    A vector library written for SR.
+    """
+
     # Constwuctor uwu
     def __init__(self, x=None, y=None, z=None, w=None):
         self._x = x if x is not None else 0

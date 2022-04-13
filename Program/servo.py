@@ -1,12 +1,32 @@
-SERVOBOARD = None
+RUGGEDUINO = None
 servoCount = 0
 
 class Servo:
-    def __init__(self, pin, angle=0, minDutyCycle=600, maxDutyCycle=2400, minAngle = 0, maxAngle=180, active=True):
+    """
+    The Servo object holds data about a servo, and can interface with the RUGGEDUINO.
+    """
+    def __init__(self, pin: int, angle: int = 0, minDutyCycle: int = 600, maxDutyCycle: int = 2400, minAngle: int = 0, maxAngle: int = 180, active: bool = True):
+        """
+        Initialize the servo and send the data to the ruggeduino.
+
+        > pin: int - The pin the servo is connected to.
+
+        > angle: int (0) - The angle to default the servo to.
+
+        > minDutyCycle: int (600) - The minimum duty cycle of the servo.
+
+        > maxDutyCycle: int (2400) - The maximum duty cycle of the servo.
+
+        > minAngle: int (0) - The minimum angle the servo can be set to.
+
+        > maxAngle: int (180) - The maximum angle the servo can be set to.
+
+        > active: bool (True) - Wether the servo is enabled by default.
+        """
         global servoCount
 
-        if SERVOBOARD is None:
-            raise ValueError("Servo.SERVOBOARD has not been set")
+        if RUGGEDUINO is None:
+            raise ValueError("Servo.RUGGEDUINO has not been set")
 
         self.pin = pin
         self.angle = angle
@@ -19,16 +39,32 @@ class Servo:
         self.ID = servoCount
         servoCount += 1
 
-        SERVOBOARD.command(f"#ADDSERVO {self.ID}, {self.pin}, {self.angle}, {self.minDutyCycle}, {self.maxDutyCycle}, {self.minAngle}, {self.maxAngle}#")
+        RUGGEDUINO.command(f"#ADDSERVO {self.ID}, {self.pin}, {self.angle}, {self.minDutyCycle}, {self.maxDutyCycle}, {self.minAngle}, {self.maxAngle}#")
     
     def attach(self):
-        SERVOBOARD.command(f"#ENABLE {self.ID}#")
+        """
+        Enable the servo.
+        """
+        RUGGEDUINO.command(f"#ENABLE {self.ID}#")
 
     def detach(self):
-        SERVOBOARD.command(f"#DISABLE {self.ID}#")
+        """
+        Disable the servo.
+        """
+        RUGGEDUINO.command(f"#DISABLE {self.ID}#")
 
     def getAngle(self):
-        return float(SERVOBOARD.command(f"#GETANGLE {self.ID}#"))
+        """
+        Get the desired angle of the servo.
+
+        > return: float - The desired angle of the servo.
+        """
+        return float(RUGGEDUINO.command(f"#GETANGLE {self.ID}#"))
 
     def setAngle(self, angle):
-        SERVOBOARD.command(f"#SETANGLE {self.ID}, {angle}#")
+        """
+        Set the desired angle of the servo.
+
+        > angle: float - The desired angle of the servo.
+        """
+        RUGGEDUINO.command(f"#SETANGLE {self.ID}, {angle}#")

@@ -8,9 +8,9 @@ Grabber Arm Servo:
 20 deg = Open
 """
 
-from sr.robot3 import *
+import sr.robot3 as sr
 import math, time
-import vector, servo, marker, can, world
+import vector, servo, marker, can, world, screen
 
 WHEELS = {
     "fl": ["SR0WAF", 0],
@@ -19,25 +19,36 @@ WHEELS = {
     "br": ["SR0GFJ", 0]
 }
 
-
 class Jeremy:
-    def __init__(self, debug: bool):
-        self.R = Robot()
+    """
+    The main controller for the robot! This is the only thing robot.py should import.
+    """ 
 
+    def __init__(self, debug: bool = True):
         """
-        servo.SERVOBOARD = self.R.ruggeduino
+        Constructor for Jeremy.
 
+        > debug: bool (True) - Enable / disable debug mode for more log content.
+        """ 
+
+        # Create variables
+        self.R = sr.Robot()
+        self.debug = debug
+        screen.RUGGEDUINO = self.R.ruggeduino
+        servo.RUGGEDUINO = self.R.ruggeduino
+
+        # Initialize Screen
+        self.display = screen.Screen()
+
+        # Initialize Servo
         self.grabberServo = servo.Servo(10, 0, 600, 2400, 0, 180, True)
         self.armServo = servo.Servo(9, 0, 500, 2500, 0, 250, True)
-
         self.grabberServo.setAngle(40)
         self.armServo.setAngle(180)
-        """
 
+        # Populate markers
         self.worldView = world.World(vector.Vec3(5750, 5750))
         self.worldView.populateMarkers(28, 0.0)
-
-        self.debug = debug
 
 		# Positions calculated from PositionCalculator program.
 		# First output in console when EXE is run.
@@ -75,6 +86,7 @@ class Jeremy:
             vector.Vec3(3.175000, 3.441500, 0.000000)
         )
 
+        # Populate cans
         for canPos in self.canPositionsFloor:
             self.worldView.addCan(can.Can(canPos, False, 0.067))
 
@@ -82,6 +94,16 @@ class Jeremy:
             self.worldView.addCan(can.Can(canPos, True, 0.067))
 
     def drive_wheel(self, power: float, fb: str, lr: str):
+        """
+        Drive a wheel with a power setting.
+
+        > power: float - Power with which to drive. Sign specifies direction.
+
+        > fb: str - Determines wheel to use: Front - ["front", "f"], Back -  ["back", "b"]
+
+        > lr: str - Determines wheel to use: Left - ["left", "l"], Right -  ["right", "r"]
+        """ 
+
         motor = ""
 
         if fb in ["front", "f"]:
@@ -101,43 +123,73 @@ class Jeremy:
             return
 
         try:
-            self.R.motor_boards[WHEELS[motor][0]
-                                ].motors[WHEELS[motor][1]].power = power
+            self.R.motor_boards[WHEELS[motor][0]].motors[WHEELS[motor][1]].power = power
         except Exception as e:
             self.error(f"Error while driving wheel: {str(e)}")
 
     def drive(self, power: float):
-        self.drive_wheel(power, "front", "left")
-        self.drive_wheel(power, "front", "right")
-        self.drive_wheel(power, "back", "left")
-        self.drive_wheel(power, "back", "right")
+        """
+        Drive all 4 wheels with the same power.
+
+        > power: float - Power with which to drive. Sign specifies direction.
+        """ 
+
+        self.drive_wheel(power, "f", "l")
+        self.drive_wheel(power, "f", "r")
+        self.drive_wheel(power, "b", "l")
+        self.drive_wheel(power, "b", "r")
 
     def turn(self, power: float):
-        self.drive_wheel(power, "front", "left")
-        self.drive_wheel(-power, "front", "right")
-        self.drive_wheel(power, "back", "left")
-        self.drive_wheel(-power, "back", "right")
+        """
+        Drive all 4 wheels with opposite powers, in order to turn.
 
-    def turn_angle(self, angle: float, power: float):
-        startRot = self.get_rot().x
-        self.turn(power)
-        while abs(self.get_rot().x + angle - startRot) > 5:   
-            self.warn("Diff: " + str(abs(self.get_rot().x + angle - startRot)))
-        self.turn(0)
+        > power: float - Power with which to drive. Sign specifies direction.
+        """ 
+        self.drive_wheel(power, "f", "l")
+        self.drive_wheel(-power, "f", "r")
+        self.drive_wheel(power, "b", "l")
+        self.drive_wheel(-power, "b", "r")
 
     def stop(self):
+        """
+        Stop driving, set all motor power to 0.
+        """ 
         self.drive(0)
 
     def see(self):
+        """
+        Find all markers visible.
+
+        > return: sr.marker[] - a list of markers visible.
+        """ 
         return self.R.camera.see()
+
+    def see_ids(self):
+        """
+        Find all marker ids visible.
+
+        > return: int[] - a list of markers' ids visible.
+        """ 
+        return self.R.camera.see_ids()
 
     def save_image(self, name: str):
+        """
+        Find all marker ids visible, and save the image.
+
+        > name: str - the file name to save image as.
+
+        > return: int[] - a list of markers' ids visible.
+        """ 
         return self.R.camera.save(self.R.usbkey / name)
 
-    def find_markers(self):
-        return self.R.camera.see()
-
     def get_servo(self, servo: str):
+        """
+        Get a servo object given a servo name.
+
+        > servo: str - The servo to get: Grabber - ["g", "grab", "grabber", "grabberservo"], Arm - ["a", "arm", "armservo"]
+
+        > return: servo - The servo object asked for.
+        """ 
         if servo.lower() in ["g", "grab", "grabber", "grabberservo"]:
             return self.grabberServo
         elif servo.lower() in ["a", "arm", "armservo"]:
@@ -147,33 +199,80 @@ class Jeremy:
             return None
 
     def set_angle(self, servo: str, angle: float):
+        """
+        Sets the angle of a servo.
+
+        > servo: str - The servo to set: Grabber - ["g", "grab", "grabber", "grabberservo"], Arm - ["a", "arm", "armservo"]
+
+        > angle: float - The angle to set the servo to.
+        """ 
         try:
             self.get_servo(servo).setAngle(angle)
         except Exception as e:
             self.error(f"Error while setting angle: {str(e)}")
 
     def get_angle(self, servo: str):
+        """
+        Gets the angle of a servo.
+
+        > servo: str - The servo to get: Grabber - ["g", "grab", "grabber", "grabberservo"], Arm - ["a", "arm", "armservo"]
+
+        > return: float - The angle the servo is set to.
+        """ 
         try:
             return self.get_servo(servo).getAngle()
         except Exception as e:
             self.error(f"Error while getting angle: {str(e)}")
 
-    def get_rot(self):
-        try:
-            res = [float(i) for i in self.R.ruggeduino.command("#GETROT#").split(" ")]
-            vec = vector.Vec3(res[0], res[1], res[2])
-            self.log(f"Received vector {str(vec)}")
-            return vec
-        except Exception as e:
-            self.error(f"Error while getting rotation: {str(e)}")
-
     def attach(self, servo: str):
+        """
+        Attaches the servo specified.
+
+        > servo: str - The servo to attach: Grabber - ["g", "grab", "grabber", "grabberservo"], Arm - ["a", "arm", "armservo"]
+        """ 
         self.get_servo(servo).attach()
 
     def detach(self, servo: str):
+        """
+        Detaches the servo specified.
+
+        > servo: str - The servo to detach: Grabber - ["g", "grab", "grabber", "grabberservo"], Arm - ["a", "arm", "armservo"]
+        """ 
         self.get_servo(servo).detach()
 
-    def computeRelativePosition(self, marker1, marker2):
+        
+    def set_num(self, v: int):
+        """
+        Sets the number displayed on the screen.
+
+        > v: int - The number to set to: [0, 9999]
+        """ 
+        try:
+            self.display.setNum(v)
+        except Exception as e:
+            self.error(f"Error in set_num: {str(e)}")
+
+    def set_dot(self, v: int):
+        """
+        Sets the position of the dot on the screen.
+
+        > v: int - The position to set to: [0, 4]. Setting it to 4 removes the dot.
+        """ 
+        try:
+            self.display.setDot(v)
+        except Exception as e:
+            self.error(f"Error in set_dot: {str(e)}")
+
+    def computeRelativePosition(self, marker1: marker.Marker, marker2: marker.Marker):
+        """
+        Calculate's Jeremy's position based on two markers.
+
+        > marker1: marker.Marker - The first marker to use.
+
+        > marker2: marker.Marker - The second marker to use.
+
+        > return: (vector.Vector, float) - The position and angle calculated.
+        """ 
         M1 = marker1.cartesian
         M2 = marker2.cartesian
         invMd = ((M2.x - M1.x) * (M2.x - M1.x) +
@@ -219,6 +318,11 @@ class Jeremy:
         return worldPosTrue, tau + kappa - (math.pi / 2)
 
     def calculateWorldspacePosition(self):
+        """
+        Calculate's Jeremy's position with camera vision.
+
+        > return: (vector.Vector, float) - The true position and angle calculated.
+        """ 
         markers = self.see()
         for seen in markers:
             self.log(f"[ VISIBLE ] Cartesian: {seen.cartesian} | ID: {seen.id}")
@@ -241,16 +345,36 @@ class Jeremy:
         return truePos, trueAngle
 
     def sleep(self, t: float):
+        """
+        Jeremy does nothing now.
+        
+        > t: float - Jeremy does nothing for t seconds.
+        """ 
         time.sleep(t)
 
     def log(self, msg: str):
+        """
+        Outputs a message to the console if debug mode is enabled.
+        
+        > msg: str - Message to output.
+        """ 
         if (self.debug):
             print("[ INFO ] " + str(msg))
 
     def warn(self, msg: str):
+        """
+        Outputs a warning to the console if debug mode is enabled.
+        
+        > msg: str - Warning to output.
+        """ 
         if (self.debug):
             print("[ WARN ] " + str(msg))
 
     def error(self, msg: str):
+        """
+        Outputs an error to the console.
+        
+        > msg: str - Error to output.
+        """ 
         print("[ ERROR ] " + str(msg))
 

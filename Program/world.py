@@ -1,15 +1,23 @@
 import random
-
-import marker
-import vector
+import marker, vector, can
 
 class World:
-	def __init__(self, size):
+	"""
+	World object to store data about the world.
+	"""
+	def __init__(self, size: vector.Vector):
 		self.size = size
 		self.markers = []
 		self.cans = []
 
-	def populateMarkers(self, numMarkers, error=0):
+	def populateMarkers(self, numMarkers: int, error: float = 0):
+		"""
+		Add markers into the world.
+
+		> numMarkers (int) - Total number of markers to add into the world.
+
+		> error: float (0) - The maximum random error in each direction of the marker positions.
+		"""
 		self.markers = [None for _ in range(numMarkers)]
 		markersPerSide = numMarkers // 4
 		markerDist = self.size.x / (markersPerSide + 1)
@@ -30,7 +38,14 @@ class World:
 		for i in range(markersPerSide):
 			self.markers[i + markersPerSide * 3] = marker.Marker(vector.Vec3(0, (markersPerSide - i) * markerDist + random.uniform(-error, error)), i + markersPerSide * 3)
 
-	def idealMarkerPosition(self, id):
+	def idealMarkerPosition(self, id: int):
+		"""
+		Get the ideal marker position for a marker.
+
+		> id: int - The id of the marker to get.
+
+		> return: marker.Marker - The ideal position for a marker.
+		"""
 		markersPerSide = len(self.markers) // 4
 		markerDist = self.size.x / (markersPerSide + 1)
 
@@ -52,5 +67,10 @@ class World:
 
 		print("[ ERROR ] Invalid Marker ID")
 
-	def addCan(self, can):
+	def addCan(self, can: can.Can):
+		"""
+		Add a can into the world.
+
+		> can: can.Can - The can to add.
+		"""
 		self.cans.append(can)

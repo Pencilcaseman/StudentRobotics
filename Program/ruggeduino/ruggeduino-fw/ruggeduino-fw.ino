@@ -33,6 +33,15 @@
   Parameters:
   0: Servo ID
 
+  #SETNUM num#
+  Set number to be displayed on screen
+  Parameters:
+  0: Number
+
+  #SETDOT dot#
+  Set position of dot on screen
+  Parameters:
+  0: Dot Position
 */
 
 #include <Arduino.h>
@@ -45,6 +54,26 @@
 // We communicate with the power board at 115200 baud.
 #define SERIAL_BAUD 115200
 #define FW_VER 1
+
+// Screen Settings
+const int segmentPins[8] = {13, 8, 7, 6, 5, 4, 3, 2}; // dp, G, F, E, D, C, B, A
+const int digitPins[4] = {9, 10, 11, 12};  // digits 1, 2, 3, 4
+const int numeral[10] = {
+  B11111100, //0
+  B01100000, //1
+  B11011010, //2
+  B11110010, //3
+  B01100110, //4
+  B10110110, //5
+  B10111110, //6
+  B11100000, //7
+  B11111110, //8
+  B11100110, //9
+};
+
+// Screen Variables
+int number = 0000;
+int dot = 4;
 
 // Contains everything required to control a servo
 class ServoConf {
@@ -92,6 +121,17 @@ void removeElement(std::vector<T> &vec, int index) {
     if (i != index) res.push_back(vec[i]);
   }
   vec.assign(res.begin(), res.end());
+}
+
+// Raise to a power but return integer instead
+int pown(int x, unsigned p) {
+  int result = 1;
+  while (p) {
+    if (p & 0x1) result *= x;
+    x *= x;
+    p >>= 1;
+  }
+  return result;
 }
 
 // Information about the current command
@@ -147,6 +187,22 @@ void updateServos() {
   for (int i = 0; i < servos.size(); i++) servos[i].update();
 }
 
+void showDigit(int number, int digit) {
+  for (int segment = 0; segment < 8; segment++) digitalWrite(segmentPins[segment], LOW);
+  for (int i = 0; i < 4; i++) digitalWrite(digitPins[i], HIGH);
+
+  digitalWrite(digitPins[digit], LOW);
+  digitalWrite(segmentPins[0], digit == dot);
+  for (int segment = 1; segment < 8; segment++) digitalWrite(segmentPins[segment], bitRead(numeral[number], segment));
+}
+
+void updateDisplay() {
+  for (int digit = 0; digit < 4; digit++) {
+    showDigit((number / pown(10, 3 - digit)) % 10, digit);
+    delayMicroseconds(1);
+  }
+}
+
 // Split a string into components separated by commas. Ignore spaces
 // and cast the values into floats. Returns a std::vector of floats.
 std::vector<float> splitParams(String params) {
@@ -175,6 +231,8 @@ void processCommand(String cmd) {
   String getAngle = "GETANGLE ";
   String enable = "ENABLE ";
   String disable = "DISABLE ";
+  String setNum = "SETNUM ";
+  String setDot = "SETDOT ";
 
   if (cmd.startsWith(createServo)) {
     // Set up a new Servo Motor
@@ -271,11 +329,46 @@ void processCommand(String cmd) {
     servos[index].active = false;
     servos[index].servo.detach();
   }
+
+  if (cmd.startsWith(setNum)) {
+    // Set number to be drawn
+    // Parameters:
+    //  0: Number
+
+    String paramStr = cmd.substring(disable.length());
+    std::vector<float> params = splitParams(paramStr);
+
+    if (params.size() != 1) {
+      Serial.print("INVALID COMMAND");
+      return;
+    }
+
+    number = (int)params[0]
+  }
+
+  if (cmd.startsWith(setDot)) {
+    // Set dot to be drawn
+    // Parameters:
+    //  0: Dot
+
+    String paramStr = cmd.substring(disable.length());
+    std::vector<float> params = splitParams(paramStr);
+
+    if (params.size() != 1) {
+      Serial.print("INVALID COMMAND");
+      return;
+    }
+
+    dot = (int)params[0]
+  }
 }
 
 void setup() {
   Serial.begin(SERIAL_BAUD);
   while (!Serial);
+
+  for (int i = 0; i < 8; i++) pinMode(segmentPins[i], OUTPUT);
+  for (int i = 0; i < 4; i++) pinMode(digitPins[i], OUTPUT);
 }
 
 void loop() {
@@ -337,4 +430,5 @@ void loop() {
   }
 
   updateServos();
+  updateDisplay();
 }
