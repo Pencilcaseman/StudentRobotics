@@ -10,7 +10,7 @@ Grabber Arm Servo:
 
 import sr.robot3 as sr
 import math, time
-import vector, servo, marker, can, world
+import vector, servo, marker, can, world, screen
 
 WHEELS = {
     "fl": ["SR0WAF", 0],
@@ -34,7 +34,11 @@ class Jeremy:
         # Create variables
         self.R = sr.Robot()
         self.debug = debug
+        screen.RUGGEDUINO = self.R.ruggeduino
         servo.RUGGEDUINO = self.R.ruggeduino
+
+        # Initialize Display
+        self.display = screen.Screen()
 
         # Initialize Servo
         self.grabberServo = servo.Servo(10, 0, 600, 2400, 0, 180, True)
@@ -235,6 +239,14 @@ class Jeremy:
         > servo: str - The servo to detach: Grabber - ["g", "grab", "grabber", "grabberservo"], Arm - ["a", "arm", "armservo"]
         """ 
         self.get_servo(servo).detach()
+
+    def set_display(self, c: chr):
+        """
+        Sets the character displayed on the screen.
+
+        > c: chr - The character to set to: [0, 9999]
+        """ 
+        self.display.set(c)
 
     def computeRelativePosition(self, marker1: marker.Marker, marker2: marker.Marker):
         """
