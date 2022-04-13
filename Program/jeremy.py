@@ -10,7 +10,7 @@ Grabber Arm Servo:
 
 import sr.robot3 as sr
 import math, time
-import vector, servo, marker, can, world, screen
+import vector, servo, marker, can, world
 
 WHEELS = {
     "fl": ["SR0WAF", 0],
@@ -34,11 +34,7 @@ class Jeremy:
         # Create variables
         self.R = sr.Robot()
         self.debug = debug
-        screen.RUGGEDUINO = self.R.ruggeduino
         servo.RUGGEDUINO = self.R.ruggeduino
-
-        # Initialize Screen
-        self.display = screen.Screen()
 
         # Initialize Servo
         self.grabberServo = servo.Servo(10, 0, 600, 2400, 0, 180, True)
@@ -239,29 +235,6 @@ class Jeremy:
         > servo: str - The servo to detach: Grabber - ["g", "grab", "grabber", "grabberservo"], Arm - ["a", "arm", "armservo"]
         """ 
         self.get_servo(servo).detach()
-
-        
-    def set_num(self, v: int):
-        """
-        Sets the number displayed on the screen.
-
-        > v: int - The number to set to: [0, 9999]
-        """ 
-        try:
-            self.display.setNum(v)
-        except Exception as e:
-            self.error(f"Error in set_num: {str(e)}")
-
-    def set_dot(self, v: int):
-        """
-        Sets the position of the dot on the screen.
-
-        > v: int - The position to set to: [0, 4]. Setting it to 4 removes the dot.
-        """ 
-        try:
-            self.display.setDot(v)
-        except Exception as e:
-            self.error(f"Error in set_dot: {str(e)}")
 
     def computeRelativePosition(self, marker1: marker.Marker, marker2: marker.Marker):
         """
