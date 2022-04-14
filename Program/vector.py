@@ -231,6 +231,9 @@ class Vector:
     def invMag(self):
         return 1 / self.mag()
 
+    def norm(self):
+        return self / self.mag()
+
     # =======================================================
 
     # Return the squared distance between two vectors
