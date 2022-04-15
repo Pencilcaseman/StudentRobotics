@@ -29,5 +29,5 @@ class Screen:
 
         if len(c) > 16:
             print("[ WARN ] Cannot have string wiht more than 16 characters. Use another line, dumbass")
-            c = c[:16]
+            c = c[:15]
         RUGGEDUINO.command(f"#WRITELCD {c}, {l}#")

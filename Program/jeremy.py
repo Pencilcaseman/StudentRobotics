@@ -10,6 +10,7 @@ Grabber Arm Servo:
 
 import sr.robot3 as sr
 import math, time
+from multiprocessing import Pool
 import vector, servo, marker, can, world, screen
 
 WHEELS = {
@@ -18,9 +19,6 @@ WHEELS = {
 	"bl": ["SR0WAF", 1],
 	"br": ["SR0GFJ", 0]
 }
-
-# fl, fr, bl, br
-WHEEL_BIAS = vector.Vec4(1, 1, 1, 1).norm()
 
 class Jeremy:
 	"""
@@ -34,11 +32,30 @@ class Jeremy:
 		> debug: bool (True) - Enable / disable debug mode for more log content.
 		""" 
 
+		# Arm config variables
+		self.ARM_FRONT = 177
+		self.ARM_MIDDLE = 90
+		self.ARM_BACK = 0
+
+		self.last_update_time = 0
+		self.last_known_position = None
+		self.last_known_angle = None
+
 		# Create variables
 		self.R = sr.Robot()
 		self.debug = debug
 		screen.RUGGEDUINO = self.R.ruggeduino
 		servo.RUGGEDUINO = self.R.ruggeduino
+
+		# Biases
+		# Callibration Settings:
+		# Hard flooring: 1.075
+		# fl, fr, bl, br
+		self.wheel_bias_default = vector.Vector(1.075, 1, 1.075, 1)
+		self.wheel_bias_default /= max(self.wheel_bias_default)
+
+		self.wheel_bias_can = vector.Vector(1.1, 1, 1.1, 1)
+		self.wheel_bias_can /= max(self.wheel_bias_can)
 
 		# Initialize Display
 		self.display = screen.Screen()
@@ -96,6 +113,9 @@ class Jeremy:
 		for canPos in self.canPositionsRaised:
 			self.worldView.addCan(can.Can(canPos, True, 0.067))
 
+	def async_position(self):
+		return self.calculateWorldspacePosition()
+
 	def drive_wheel(self, power: float, fb: str, lr: str):
 		"""
 		Drive a wheel with a power setting.
@@ -126,10 +146,14 @@ class Jeremy:
 			return
 			
 		# Multiply the power by the corresponding bias
-		if motor == "fl": power *= WHEEL_BIAS.x
-		if motor == "fr": power *= WHEEL_BIAS.y
-		if motor == "bl": power *= WHEEL_BIAS.z
-		if motor == "bl": power *= WHEEL_BIAS.w
+		hasCan = self.has_can()
+
+		if motor == "fl": power *= self.wheel_bias_default.x if not hasCan else self.wheel_bias_can.x
+		if motor == "fr": power *= self.wheel_bias_default.y if not hasCan else self.wheel_bias_can.y
+		if motor == "bl": power *= self.wheel_bias_default.z if not hasCan else self.wheel_bias_can.z
+		if motor == "br": power *= self.wheel_bias_default.w if not hasCan else self.wheel_bias_can.w
+
+		self.log(f"Motor Power (Adjusted): {motor}, {power}, {self.wheel_bias}")
 
 		try:
 			self.R.motor_boards[WHEELS[motor][0]].motors[WHEELS[motor][1]].power = power
@@ -265,6 +289,22 @@ class Jeremy:
 		"""
 		ret = self.R.ruggeduino.command("#HASCAN#")
 		return ret == "1"
+
+	def set_grabber(self, o: bool):
+		"""
+		Opens the grabber arm.
+
+		> o: bool - Open?
+		"""
+		self.grabberServo.setAngle(55 if o else 105)
+
+	def set_arm(self, o: int):
+		"""
+		Moves the main arm.
+
+		> o: int - Arm state.
+		"""
+		self.armServo.setAngle(o)
 
 	def computeRelativePosition(self, marker1: marker.Marker, marker2: marker.Marker):
 		"""
