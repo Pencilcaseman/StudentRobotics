@@ -13,6 +13,13 @@ import math, time
 from multiprocessing import Pool
 import vector, servo, marker, can, world, screen
 
+RAD_TO_DEG = 180 / math.pi
+
+TOP_LEFT_CORNER = 0
+TOP_RIGHT_CORNER = 1
+BOTTOM_LEFT_CORNER = 2
+BOTTOM_RIGHT_CORNER = 3
+
 WHEELS = {
 	"fl": ["SR0WAF", 0],
 	"fr": ["SR0GFJ", 1],
@@ -37,9 +44,14 @@ class Jeremy:
 		self.ARM_MIDDLE = 90
 		self.ARM_BACK = 0
 
-		self.last_update_time = 0
-		self.last_known_position = None
-		self.last_known_angle = None
+		self.corner = None
+		self.drive_power = 0.4 # Straignt line power for Jeremy (must remain constant?)
+		self.turn_power = 0.3 # Turning power for Jeremy (must remain constant?)
+		self.last_update_time = 0 # Time since last camera update
+		self.last_known_position = None # Last *KNOWN* position
+		self.last_known_angle = None # Last *KNOWN* angle
+		self.estimated_velocity = None # Estimated velocity at given power level
+		self.estimated_angular_velocity = None # Estimated ang. vel. at given power level
 
 		# Create variables
 		self.R = sr.Robot()
@@ -112,9 +124,6 @@ class Jeremy:
 
 		for canPos in self.canPositionsRaised:
 			self.worldView.addCan(can.Can(canPos, True, 0.067))
-
-	def async_position(self):
-		return self.calculateWorldspacePosition()
 
 	def drive_wheel(self, power: float, fb: str, lr: str):
 		"""
@@ -364,7 +373,7 @@ class Jeremy:
 		"""
 		Calculate's Jeremy's position with camera vision.
 
-		> return: (vector.Vector, float) - The true position and angle calculated.
+		> return: (vector.Vector, float) - The true position and angle (deg) calculated.
 		""" 
 		markers = self.see()
 		for seen in markers:
@@ -385,7 +394,67 @@ class Jeremy:
 
 		truePos = sumPos / (len(markers) - 1)
 		trueAngle = theta + (math.pi * 2 if theta < -math.pi else 0)
-		return truePos, trueAngle
+		return truePos, trueAngle * RAD_TO_DEG
+
+	def initial_calibration(self):
+		"""
+		Calibrate the estimated velocity and angular velocity of Jeremy
+		at a particular power level.
+
+		Requirements:
+		 - Positive power represents a clockwise turn
+		 - Power level remains constant
+		 - 0 deg => Facing right
+			- -90 deg => Facing up
+		 - Robot does not rotate more than 360 degrees
+		"""
+
+		# ===========
+		#    TURN
+		# ===========
+
+		dt = 0.5 # Sleep for longer???
+
+		_, theta0 = self.calculateWorldspacePosition()
+		self.turn(self.turn_power)
+		self.sleep(dt)
+		s1, theta1 = self.calculateWorldspacePosition()
+		self.turn(0) # Make sure to stop turning
+
+		dtheta = theta1 - theta0
+		if dtheta < 0: dtheta += 360 # Ensure 0 < dtheta < 360
+		self.estimated_angular_velocity = dtheta / dt
+
+		# Determine which corner we are in
+		if s1.x < 5.75 / 2 and s1.y < 5.75 / 2: self.corner = TOP_LEFT_CORNER
+		if s1.x < 5.75 / 2 and s1.y > 5.75 / 2: self.corner = BOTTOM_LEFT_CORNER
+		if s1.x > 5.75 / 2 and s1.y < 5.75 / 2: self.corner = TOP_RIGHT_CORNER
+		if s1.x > 5.75 / 2 and s1.y > 5.75 / 2: self.corner = BOTTOM_RIGHT_CORNER
+
+		# Make sure to look directly into the arena
+		if self.corner == TOP_LEFT_CORNER: self.setApproximateAngle(45) # Down and right
+		if self.corner == TOP_RIGHT_CORNER: self.setApproximateAngle(135) # Down and left
+		if self.corner == BOTTOM_LEFT_CORNER: self.setApproximateAngle(-45) # Up and right
+		if self.corner == BOTTOM_RIGHT_CORNER: self.setApproximateAngle(-135) # Up and left
+
+		# ===========
+		#    MOVE
+		# ===========
+
+		dt = 1.5
+
+		self.drive(self.drive_power)
+		self.sleep(dt)
+		s2, theta2 = self.calculateWorldspacePosition()
+		self.drive(0)
+
+		# Update records
+		self.last_update_time = time.time()
+		self.last_known_position = s2
+		self.last_known_angle = theta2
+
+		ds = s2 - s1
+		self.estimated_velocity = ds.mag() / dt
 
 	def sleep(self, t: float):
 		"""

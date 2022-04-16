@@ -23,7 +23,7 @@ static bool showRaycastDebugInfo = false;
  * and the rendered board is 575 pixels square
  */
 
-constexpr double pixelToMetre = 0.005;
+constexpr double pixelToMetre = 0.01;
 constexpr double metreToPixel = 1.0 / pixelToMetre;
 
 // constexpr int64_t worldMarkers = 12; // Show a few markers for debugging purposes
@@ -46,7 +46,7 @@ constexpr double distanceSensorMaxRange = 2.00;
 static ofTrueTypeFont defaultFont;
 
 template<typename T>
-inline const T &getGridPoint(const std::vector<std::vector<T>> &vals, int64_t index) {
+inline const T& getGridPoint(const std::vector<std::vector<T>>& vals, int64_t index) {
 	int64_t row = index / vals[0].size();
 	int64_t col = index - row * vals[0].size();
 	return vals[row][col];
@@ -639,16 +639,23 @@ public:
 			// *** we need the angle to the positive x ***
 			if (theta > 0 && rayTheta < 0) rayTheta += PI;
 
+			Line ray((m_posUnknown - m_world->m_pos) * pixelToMetre, marker.cartesian);
+			bool intersectsCentre = ray.intersects(raisedEdge0).first ||
+				ray.intersects(raisedEdge1).first ||
+				ray.intersects(raisedEdge2).first ||
+				ray.intersects(raisedEdge3).first;
+
 			// Do some checks to see if the marker is within the robots FOV
 			// 1. Angle to marker is greater than the smaller FOV angle
 			// 2. Angle to marker is smaller than the larger FOV angle
 			// 3. Marker is in front of robot -- done by checking if dot-product is greater than 0
+			// 4. Marker is not blocked by the centre zone
 			if (theta < rayTheta &&
 				theta > rayTheta - rayAngle * 2
 				&& offset.dot(
 					Vec3d(cos(rayAngle + m_thetaUnknown),
 						sin(rayAngle + m_thetaUnknown))
-				) > 0) {
+				) > 0 && !intersectsCentre) {
 				// Highlight the visible dots
 				ofSetColor(170, 170, 255);
 				ofDrawCircle(
@@ -963,13 +970,13 @@ public:
 		m_pathFinder.addLine(raisedEdge2.start, raisedEdge2.end, minDist);
 		m_pathFinder.addLine(raisedEdge3.start, raisedEdge3.end, minDist);
 
-		m_pathFinder.bake({0, 0}, {0, 0});
+		m_pathFinder.bake({ 0, 0 }, { 0, 0 });
 	}
 
 	// THIS NEEDS TO BE OPTIMISED -- SOME STUFF HERE IS FOR DEBUGGING
 	// PURPOSES AND CAN BE REMOVED AND REPLACED WITH MORE PERFORMANT
 	// AND MEMORY-EFFICIENT ALTERNATIVES
-	std::vector<Vec3f> generatePathPoints(const Vec3f &targetCoord) {
+	std::vector<Vec3f> generatePathPoints(const Vec3f& targetCoord) {
 		int64_t resolution = 50;
 		Vec3f offset = m_world->m_size / (resolution * 2);
 		Vec3f inc = m_world->m_size / (float)resolution;
@@ -981,7 +988,7 @@ public:
 			}
 			points.emplace_back(row);
 		}
-		
+
 		int col = int(librapid::map((targetCoord.x - m_world->m_pos.x) * pixelToMetre, 0, m_world->m_size.x, 0, resolution));
 		int row = int(librapid::map((targetCoord.y - m_world->m_pos.y) * pixelToMetre, 0, m_world->m_size.y, 0, resolution));
 		if (col < 0) col = 0;
@@ -1073,12 +1080,12 @@ public:
 		int64_t pathIndex = 0; // If this becomes greater than 1
 
 		// while (getGridPoint(points, pathIndex) != target) {
-		// 
+		//
 		// }
 		*/
 
 		m_pathFinder.setTargetCell(row, col);
-		m_pathFinder.bake({-1, -1}, {-1, -1}); // This is just to update the target cell
+		m_pathFinder.bake({ -1, -1 }, { -1, -1 }); // This is just to update the target cell
 
 		auto pathPoints = m_pathFinder.getPoints();
 
