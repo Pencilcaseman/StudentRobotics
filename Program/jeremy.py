@@ -52,6 +52,8 @@ class Jeremy:
 		self.last_known_angle = None # Last *KNOWN* angle
 		self.estimated_velocity = None # Estimated velocity at given power level
 		self.estimated_angular_velocity = None # Estimated ang. vel. at given power level
+		self.estimated_position = None # Estimated position of jeremy based on known and appriximate movements
+		self.estimated_angle = None # Estimated angle of jeremy based on known and appriximate rotations
 
 		# Create variables
 		self.R = sr.Robot()
@@ -161,8 +163,6 @@ class Jeremy:
 		if motor == "fr": power *= self.wheel_bias_default.y if not hasCan else self.wheel_bias_can.y
 		if motor == "bl": power *= self.wheel_bias_default.z if not hasCan else self.wheel_bias_can.z
 		if motor == "br": power *= self.wheel_bias_default.w if not hasCan else self.wheel_bias_can.w
-
-		self.log(f"Motor Power (Adjusted): {motor}, {power}, {self.wheel_bias}")
 
 		try:
 			self.R.motor_boards[WHEELS[motor][0]].motors[WHEELS[motor][1]].power = power
@@ -380,6 +380,8 @@ class Jeremy:
 			self.log(f"[ VISIBLE ] Cartesian: {seen.cartesian} | ID: {seen.id}")
 
 		if len(markers) < 2:
+			if self.debug:
+				self.save_image(f"{time.time()}.png")
 			return None, None
 
 		sumPos = vector.Vec3(0, 0, 0)
@@ -418,8 +420,9 @@ class Jeremy:
 		_, theta0 = self.calculateWorldspacePosition()
 		self.turn(self.turn_power)
 		self.sleep(dt)
+		self.turn(0)
+		self.sleep(0.333)
 		s1, theta1 = self.calculateWorldspacePosition()
-		self.turn(0) # Make sure to stop turning
 
 		dtheta = theta1 - theta0
 		if dtheta < 0: dtheta += 360 # Ensure 0 < dtheta < 360
@@ -432,29 +435,57 @@ class Jeremy:
 		if s1.x > 5.75 / 2 and s1.y > 5.75 / 2: self.corner = BOTTOM_RIGHT_CORNER
 
 		# Make sure to look directly into the arena
-		if self.corner == TOP_LEFT_CORNER: self.setApproximateAngle(45) # Down and right
-		if self.corner == TOP_RIGHT_CORNER: self.setApproximateAngle(135) # Down and left
-		if self.corner == BOTTOM_LEFT_CORNER: self.setApproximateAngle(-45) # Up and right
-		if self.corner == BOTTOM_RIGHT_CORNER: self.setApproximateAngle(-135) # Up and left
+		# if self.corner == TOP_LEFT_CORNER: self.setApproximateAngle(45) # Down and right
+		# if self.corner == TOP_RIGHT_CORNER: self.setApproximateAngle(135) # Down and left
+		# if self.corner == BOTTOM_LEFT_CORNER: self.setApproximateAngle(-45) # Up and right
+		# if self.corner == BOTTOM_RIGHT_CORNER: self.setApproximateAngle(-135) # Up and left
 
 		# ===========
 		#    MOVE
 		# ===========
 
-		dt = 1.5
+		dt = 0.5 # 1.5
 
 		self.drive(self.drive_power)
 		self.sleep(dt)
-		s2, theta2 = self.calculateWorldspacePosition()
 		self.drive(0)
+		self.sleep(0.333)
+		s2, theta2 = self.calculateWorldspacePosition()
 
 		# Update records
 		self.last_update_time = time.time()
 		self.last_known_position = s2
 		self.last_known_angle = theta2
 
+		self.estimated_position = s2
+		self.estimated_angle = theta2
+
 		ds = s2 - s1
 		self.estimated_velocity = ds.mag() / dt
+
+	def setApproximateAngle(self, angle: float):
+		"""
+		Set the approximate angle of the robot based on estimated
+		angular velcity calculations and the previous known angle
+		"""
+
+		while angle < -180: angle += 360
+		while angle > 180: angle -= 360
+
+		dtheta = angle - self.estimated_angle
+		while dtheta < -180: dtheta += 360
+		while dtheta > 180: dtheta -= 360
+
+		if dtheta > 0: power = self.turn_power
+		else: power = -self.turn_power
+		t = abs(dtheta) / self.estimated_angular_velocity
+
+		self.turn(power)
+		self.sleep(t)
+		self.turn(0)
+		self.sleep(0.333) # To allow jeremy to stop spinning
+
+		self.estimated_angle = angle
 
 	def sleep(self, t: float):
 		"""
