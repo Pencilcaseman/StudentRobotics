@@ -14,6 +14,6 @@ class Can(marker.Marker):
 
         > radius: float - The radius of the can.
         """
-        super().__init__(cartesian)
+        super().__init__(cartesian, None)
         self.upright = upright
         self.radius = radius

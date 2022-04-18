@@ -8,12 +8,15 @@ Grabber Arm Servo:
 20 deg = Open
 """
 
+from cmath import tau
+from re import L
 import sr.robot3 as sr
 import math, time
 from multiprocessing import Pool
 import vector, servo, marker, can, world, screen
 
 RAD_TO_DEG = 180 / math.pi
+DEG_TO_RAD = math.pi / 180
 
 TOP_LEFT_CORNER = 0
 TOP_RIGHT_CORNER = 1
@@ -44,6 +47,14 @@ class Jeremy:
 		self.ARM_MIDDLE = 90
 		self.ARM_BACK = 0
 
+		# Direction variables
+		self.FORWARD = 0
+		self.BACKWARD = 1
+		self.RIGHT = 2
+		self.LEFT = 3
+		self.UNKNOWN = -1
+
+		self.direction = None
 		self.corner = None
 		self.drive_power = 0.4 # Straignt line power for Jeremy (must remain constant?)
 		self.turn_power = 0.3 # Turning power for Jeremy (must remain constant?)
@@ -54,6 +65,10 @@ class Jeremy:
 		self.estimated_angular_velocity = None # Estimated ang. vel. at given power level
 		self.estimated_position = None # Estimated position of jeremy based on known and appriximate movements
 		self.estimated_angle = None # Estimated angle of jeremy based on known and appriximate rotations
+
+		self.position_buffer = []
+		self.angle_buffer = []
+		self.buffer_size = 0
 
 		# Create variables
 		self.R = sr.Robot()
@@ -138,6 +153,8 @@ class Jeremy:
 		> lr: str - Determines wheel to use: Left - ["left", "l"], Right -  ["right", "r"]
 		""" 
 
+		self.direction = self.UNKNOWN
+
 		motor = ""
 
 		if fb in ["front", "f"]:
@@ -181,22 +198,45 @@ class Jeremy:
 		self.drive_wheel(power, "b", "l")
 		self.drive_wheel(power, "b", "r")
 
+		if power == 0: self.direction = None
+		if power > 0: self.direction = self.FORWARD
+		if power < 0: self.direction = self.BACKWARD
+
 	def turn(self, power: float):
 		"""
 		Drive all 4 wheels with opposite powers, in order to turn.
 
 		> power: float - Power with which to drive. Sign specifies direction.
-		""" 
+		"""
+
 		self.drive_wheel(power, "f", "l")
 		self.drive_wheel(-power, "f", "r")
 		self.drive_wheel(power, "b", "l")
 		self.drive_wheel(-power, "b", "r")
 
+		if power == 0: self.direction = None
+		if power > 0: self.direction = self.RIGHT
+		if power < 0: self.direction = self.LEFT
+
 	def stop(self):
 		"""
 		Stop driving, set all motor power to 0.
-		""" 
+		"""
+		if self.direction is None or self.direction == self.UNKNOWN:
+			self.drive(0)
+		elif self.direction == self.FORWARD:
+			self.drive(-0.2)
+		elif self.direction == self.BACKWARD:
+			self.drive(0.2)
+		elif self.direction == self.RIGHT:
+			self.turn(-0.2)
+		elif self.direction == self.LEFT:
+			self.turn(0.2)
+
+		self.sleep(0.02)
 		self.drive(0)
+		self.sleep(0.1)
+		self.direction = None
 
 	def see(self):
 		"""
@@ -204,6 +244,7 @@ class Jeremy:
 
 		> return: sr.marker[] - a list of markers visible.
 		""" 
+		self.stop()
 		return self.R.camera.see()
 
 	def see_ids(self):
@@ -324,9 +365,18 @@ class Jeremy:
 		> marker2: marker.Marker - The second marker to use.
 
 		> return: (vector.Vector, float) - The position and angle calculated.
-		""" 
+		"""
+
 		M1 = marker1.cartesian
 		M2 = marker2.cartesian
+
+		# Offset the marker coordinates
+		# (markers are 200mm squares)
+		M1.x += 100 * math.cos(marker1.orientation.pitch)
+		M1.y += 100 * math.sin(marker1.orientation.pitch)
+		M2.x += 100 * math.cos(marker2.orientation.pitch)
+		M2.y += 100 * math.sin(marker2.orientation.pitch)
+
 		invMd = ((M2.x - M1.x) * (M2.x - M1.x) +
 				 (M2.y - M1.y) * (M2.y - M1.y)) ** -0.5
 		D1 = M1.mag()
@@ -369,19 +419,28 @@ class Jeremy:
 
 		return worldPosTrue, tau + kappa - (math.pi / 2)
 
-	def calculateWorldspacePosition(self):
+	def calculateWorldspacePosition(self, reattempt: bool = False, retNone: bool = False):
 		"""
 		Calculate's Jeremy's position with camera vision.
 
 		> return: (vector.Vector, float) - The true position and angle (deg) calculated.
 		""" 
+
 		markers = self.see()
 		for seen in markers:
 			self.log(f"[ VISIBLE ] Cartesian: {seen.cartesian} | ID: {seen.id}")
 
 		if len(markers) < 2:
-			if self.debug:
-				self.save_image(f"{time.time()}.png")
+			if reattempt:
+				self.log("Saw fewer than 2 markers. Attempting to take another photo")
+				self.sleep(0.5)
+				return self.calculateWorldspacePosition()
+			
+			if not retNone:
+				self.log("Saw fewer than 2 markers. Falling back to estimated position")
+				return self.estimated_position, self.estimated_angle
+			
+			self.log("Saw fewer than 2 markers. Returning None")
 			return None, None
 
 		sumPos = vector.Vec3(0, 0, 0)
@@ -396,7 +455,15 @@ class Jeremy:
 
 		truePos = sumPos / (len(markers) - 1)
 		trueAngle = theta + (math.pi * 2 if theta < -math.pi else 0)
-		return truePos, trueAngle * RAD_TO_DEG
+
+		# subAngle = math.pi - theta
+		# truePos.x += 110 * math.sin(subAngle) + 160 * math.cos(subAngle)
+		# truePos.y -= 110 * math.cos(subAngle) + 160 * math.sin(subAngle)
+
+		self.estimated_position = truePos
+		self.estimated_angle = trueAngle
+
+		return truePos, trueAngle
 
 	def initial_calibration(self):
 		"""
@@ -417,16 +484,18 @@ class Jeremy:
 
 		dt = 0.5 # Sleep for longer???
 
-		_, theta0 = self.calculateWorldspacePosition()
+		_, theta0 = self.calculateWorldspacePosition(True)
 		self.turn(self.turn_power)
 		self.sleep(dt)
-		self.turn(0)
-		self.sleep(0.333)
-		s1, theta1 = self.calculateWorldspacePosition()
+		self.stop()
+		self.sleep(0.1)
+		s1, theta1 = self.calculateWorldspacePosition(True)
 
 		dtheta = theta1 - theta0
-		if dtheta < 0: dtheta += 360 # Ensure 0 < dtheta < 360
+		if dtheta < 0: dtheta += 2 * math.pi # Ensure 0 < dtheta < 360
 		self.estimated_angular_velocity = dtheta / dt
+
+		self.angle_buffer.append((dtheta, dt))
 
 		# Determine which corner we are in
 		if s1.x < 5.75 / 2 and s1.y < 5.75 / 2: self.corner = TOP_LEFT_CORNER
@@ -435,10 +504,10 @@ class Jeremy:
 		if s1.x > 5.75 / 2 and s1.y > 5.75 / 2: self.corner = BOTTOM_RIGHT_CORNER
 
 		# Make sure to look directly into the arena
-		# if self.corner == TOP_LEFT_CORNER: self.setApproximateAngle(45) # Down and right
-		# if self.corner == TOP_RIGHT_CORNER: self.setApproximateAngle(135) # Down and left
-		# if self.corner == BOTTOM_LEFT_CORNER: self.setApproximateAngle(-45) # Up and right
-		# if self.corner == BOTTOM_RIGHT_CORNER: self.setApproximateAngle(-135) # Up and left
+		# if self.corner == TOP_LEFT_CORNER: self.setApproximateAngle(math.pi / 4) # Down and right
+		# if self.corner == TOP_RIGHT_CORNER: self.setApproximateAngle(math.pi * 0.75) # Down and left
+		# if self.corner == BOTTOM_LEFT_CORNER: self.setApproximateAngle(-math.pi / 4) # Up and right
+		# if self.corner == BOTTOM_RIGHT_CORNER: self.setApproximateAngle(-math.pi * 0.75) # Up and left
 
 		# ===========
 		#    MOVE
@@ -448,9 +517,9 @@ class Jeremy:
 
 		self.drive(self.drive_power)
 		self.sleep(dt)
-		self.drive(0)
-		self.sleep(0.333)
-		s2, theta2 = self.calculateWorldspacePosition()
+		self.stop()
+		self.sleep(0.1)
+		s2, theta2 = self.calculateWorldspacePosition(True)
 
 		# Update records
 		self.last_update_time = time.time()
@@ -463,18 +532,48 @@ class Jeremy:
 		ds = s2 - s1
 		self.estimated_velocity = ds.mag() / dt
 
+		self.position_buffer.append((ds.mag(), dt))
+
+	def doCalibrateThing(self):
+		"""
+		Tom. Again. Sex please
+		"""
+
+		vel = []
+		rot = []
+
+		for i in range(len(self.position_buffer)):
+			t = self.position_buffer[i][1]
+			s = self.position_buffer[i][0]
+			if (t < 1e-5): continue
+			vel.append(abs(s) / t)
+
+		for i in range(len(self.angle_buffer)):
+			t = self.angle_buffer[i][1]
+			a = self.angle_buffer[i][0]
+			if (t < 1e-5): continue
+			rot.append(abs(a) / t)
+
+		if len(vel) > 0: self.estimated_velocity = sum(vel) / len(vel)
+		if len(rot) > 0: self.estimated_angular_velocity = sum(rot) / len(rot)
+
+		self.log(f"Estimated Velocity: {self.estimated_velocity}")
+		self.log(f"Estimated Ang Vel.: {self.estimated_angular_velocity}")
+		self.log(f"Choo Chooo Fuckers: {self.position_buffer}")
+		self.log(f"Choooo Chooo Cunts: {self.angle_buffer}")
+
 	def setApproximateAngle(self, angle: float):
 		"""
 		Set the approximate angle of the robot based on estimated
 		angular velcity calculations and the previous known angle
 		"""
 
-		while angle < -180: angle += 360
-		while angle > 180: angle -= 360
+		while angle < -math.pi: angle += math.pi * 2
+		while angle > math.pi: angle -= math.pi * 2
 
 		dtheta = angle - self.estimated_angle
-		while dtheta < -180: dtheta += 360
-		while dtheta > 180: dtheta -= 360
+		while dtheta < -math.pi: dtheta += math.pi * 2
+		while dtheta > math.pi: dtheta -= math.pi * 2
 
 		if dtheta > 0: power = self.turn_power
 		else: power = -self.turn_power
@@ -482,10 +581,74 @@ class Jeremy:
 
 		self.turn(power)
 		self.sleep(t)
-		self.turn(0)
-		self.sleep(0.333) # To allow jeremy to stop spinning
+		self.stop()
+		self.sleep(0.1) # To allow jeremy to stop spinning
 
 		self.estimated_angle = angle
+
+		# Continue calibrating if needed
+		if len(self.angle_buffer) < self.buffer_size:
+			truePos, trueAngle = self.calculateWorldspacePosition(True, True)
+			if truePos is None:
+				return
+
+			self.estimated_angle = trueAngle
+			self.estimated_position = truePos
+
+			# If too small an angle, don't include it
+			if dtheta > 10 * DEG_TO_RAD:
+				self.angle_buffer.append((dtheta, t))
+			
+			self.doCalibrateThing()
+
+	def driveApproximateDist(self, dist: float):
+		"""
+		Set the ... tom do this...
+		"""
+
+		self.estimated_position.x += dist * math.cos(self.estimated_angle)
+		self.estimated_position.y += dist * math.sin(self.estimated_angle)
+
+		t = abs(dist) / self.estimated_velocity
+
+		self.drive(self.drive_power * (1 if dist > 0 else -1))
+		self.sleep(t)
+		self.stop()
+		self.sleep(0.1) # Stoppie
+
+		# Continue calibrating if needed
+		if len(self.angle_buffer) < self.buffer_size:
+			truePos, trueAngle = self.calculateWorldspacePosition(True, True)
+			if truePos is None:
+				return
+
+			self.estimated_angle = trueAngle
+			self.estimated_position = truePos
+
+			if dist > 250:
+				self.position_buffer.append((dist, t))
+
+			self.doCalibrateThing()
+
+	def turnTo(self, coord: vector.Vector):
+		"""
+		Tom do things
+		"""
+
+		delta = coord - self.estimated_position
+		theta = math.atan2(delta.y, delta.x) # math.atan(delta.y / delta.x)
+		
+		self.setApproximateAngle(theta)
+
+	def driveTo(self, coord: vector.Vector, steps: int = 1):
+		"""
+		Tom help.
+		"""
+
+		for i in range(steps):
+			delta = coord - self.estimated_position
+			self.turnTo(coord)
+			self.driveApproximateDist(delta.mag() * ((i + 1) / steps))
 
 	def sleep(self, t: float):
 		"""
