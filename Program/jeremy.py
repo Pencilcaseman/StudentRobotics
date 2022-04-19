@@ -522,7 +522,7 @@ class Jeremy:
 		s2, theta2 = self.calculateWorldspacePosition(True)
 
 		# Update records
-		self.last_update_time = time.time()
+		self.last_update_time = self.time()
 		self.last_known_position = s2
 		self.last_known_angle = theta2
 
@@ -653,10 +653,21 @@ class Jeremy:
 	def sleep(self, t: float):
 		"""
 		Jeremy does nothing now.
+
+		Note: This uses a spin timer so is highly inefficient from a
+		processor point of view
 		
 		> t: float - Jeremy does nothing for t seconds.
 		""" 
-		time.sleep(t)
+		start = time.perf_counter()
+		while time.perf_counter() - start < t:
+			pass
+
+	def time(self):
+		"""
+		Return a high-precision time in seconds -- more precise than time.time()
+		"""
+		return time.perf_counter()
 
 	def log(self, msg: str):
 		"""
