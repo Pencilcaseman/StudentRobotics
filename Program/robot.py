@@ -3,7 +3,8 @@ import math
 import vector
 
 jezza = Jeremy()
-jezza.buffer_size = 5
+jezza.debugLevel = "no"
+jezza.buffer_size = 100
 
 # jezza.set_grabber(True)
 # jezza.sleep(1)
@@ -82,16 +83,40 @@ while True:
 	jezza.sleep(1)
 """
 
-
 jezza.initial_calibration()
 jezza.sleep(2)
 jezza.setApproximateAngle(0)
 jezza.sleep(2)
 jezza.setApproximateAngle(math.pi / 2)
 jezza.sleep(2)
-jezza.driveTo(vector.Vec2(1800, 1140), 4)
+
+jezza.driveTo(vector.Vec2(1000, 1000), 4)
+jezza.pickUp(3)
+jezza.driveTo(vector.Vec2(3000, 3000), 3)
+jezza.drop()
+
+jezza.driveTo(vector.Vec2(1000, 5750 / 2), 4)
+jezza.pickUp(3)
+jezza.driveTo(vector.Vec2(3000, 3000), 3)
+jezza.drop()
+
+jezza.driveTo(vector.Vec2(715, 1765), 4)
+jezza.pickUp(3)
+jezza.driveTo(vector.Vec2(3000, 3000), 3)
+jezza.drop()
+
 # jezza.lookAt(vector.Vec2(500, 500))
 # jezza.sleep(2)
+
+"""
+while True:
+	jezza.set_angle("g", 55)
+	jezza.sleep(2)
+	jezza.set_angle("g", 105)
+	jezza.sleep(0.5)
+	jezza.set_display("CAN" if jezza.has_can() else "NO CAN", 0)
+	jezza.sleep(3)
+"""	
 
 
 """
@@ -104,4 +129,11 @@ while True:
 	jezza.set_display(posStr, 0)
 	jezza.set_display(angleStr, 1)
 	jezza.sleep(1)
+"""
+
+"""
+jezza.sleep(1)
+jezza.pickUp(1, 0)
+jezza.sleep(3)
+jezza.drop()
 """

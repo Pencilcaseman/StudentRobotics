@@ -16,6 +16,9 @@
 # *.dylib
 # *.dll
 
+# Basically just robot.zip
+*.zip
+
 # Fortran module files
 *.mod
 *.smod

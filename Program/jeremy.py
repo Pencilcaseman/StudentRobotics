@@ -54,6 +54,8 @@ class Jeremy:
 		self.LEFT = 3
 		self.UNKNOWN = -1
 
+		self.debugLevel = 0
+
 		self.direction = None
 		self.corner = None
 		self.drive_power = 0.4 # Straignt line power for Jeremy (must remain constant?)
@@ -191,7 +193,7 @@ class Jeremy:
 		Drive all 4 wheels with the same power.
 
 		> power: float - Power with which to drive. Sign specifies direction.
-		""" 
+		"""
 
 		self.drive_wheel(power, "f", "l")
 		self.drive_wheel(power, "f", "r")
@@ -222,6 +224,7 @@ class Jeremy:
 		"""
 		Stop driving, set all motor power to 0.
 		"""
+
 		if self.direction is None or self.direction == self.UNKNOWN:
 			self.drive(0)
 		elif self.direction == self.FORWARD:
@@ -238,12 +241,15 @@ class Jeremy:
 		self.sleep(0.1)
 		self.direction = None
 
+		return 
+
 	def see(self):
 		"""
 		Find all markers visible.
 
 		> return: sr.marker[] - a list of markers visible.
 		""" 
+
 		self.stop()
 		return self.R.camera.see()
 
@@ -253,6 +259,7 @@ class Jeremy:
 
 		> return: int[] - a list of markers' ids visible.
 		""" 
+
 		return self.R.camera.see_ids()
 
 	def save_image(self, name: str):
@@ -263,6 +270,7 @@ class Jeremy:
 
 		> return: int[] - a list of markers' ids visible.
 		""" 
+
 		return self.R.camera.save(self.R.usbkey / name)
 
 	def get_servo(self, servo: str):
@@ -273,6 +281,7 @@ class Jeremy:
 
 		> return: servo - The servo object asked for.
 		""" 
+
 		if servo.lower() in ["g", "grab", "grabber", "grabberservo"]:
 			return self.grabberServo
 		elif servo.lower() in ["a", "arm", "armservo"]:
@@ -289,6 +298,7 @@ class Jeremy:
 
 		> angle: float - The angle to set the servo to.
 		""" 
+
 		try:
 			self.get_servo(servo).setAngle(angle)
 		except Exception as e:
@@ -302,6 +312,7 @@ class Jeremy:
 
 		> return: float - The angle the servo is set to.
 		""" 
+
 		try:
 			return self.get_servo(servo).getAngle()
 		except Exception as e:
@@ -313,6 +324,7 @@ class Jeremy:
 
 		> servo: str - The servo to attach: Grabber - ["g", "grab", "grabber", "grabberservo"], Arm - ["a", "arm", "armservo"]
 		""" 
+
 		self.get_servo(servo).attach()
 
 	def detach(self, servo: str):
@@ -321,22 +333,25 @@ class Jeremy:
 
 		> servo: str - The servo to detach: Grabber - ["g", "grab", "grabber", "grabberservo"], Arm - ["a", "arm", "armservo"]
 		""" 
+
 		self.get_servo(servo).detach()
 
-	def set_display(self, c: str, l: int):
+	def set_display(self, c: str, l: int = 0):
 		"""
 		Sets the character displayed on the screen.
 
 		> c: str - The string to write to the LCD.
 		
 		> l: int - The line to write to [0, 1].
-		""" 
+		"""
+
 		self.display.set(c, l)
 
 	def has_can(self):
 		"""
 		Returns true if the sensors in the grabber form a complete circuit.
 		"""
+
 		ret = self.R.ruggeduino.command("#HASCAN#")
 		return ret == "1"
 
@@ -346,6 +361,7 @@ class Jeremy:
 
 		> o: bool - Open?
 		"""
+
 		self.grabberServo.setAngle(55 if o else 105)
 
 	def set_arm(self, o: int):
@@ -354,6 +370,7 @@ class Jeremy:
 
 		> o: int - Arm state.
 		"""
+
 		self.armServo.setAngle(o)
 
 	def computeRelativePosition(self, marker1: marker.Marker, marker2: marker.Marker):
@@ -419,7 +436,7 @@ class Jeremy:
 
 		return worldPosTrue, tau + kappa - (math.pi / 2)
 
-	def calculateWorldspacePosition(self, reattempt: bool = False, retNone: bool = False):
+	def calculateWorldspacePosition(self, reattempt: bool = False, retNone: bool = False, updatePos: bool = True):
 		"""
 		Calculate's Jeremy's position with camera vision.
 
@@ -431,10 +448,12 @@ class Jeremy:
 			self.log(f"[ VISIBLE ] Cartesian: {seen.cartesian} | ID: {seen.id}")
 
 		if len(markers) < 2:
+			# self.save_image("{}.png".format(round(time.time(), 3)))
+			
 			if reattempt:
 				self.log("Saw fewer than 2 markers. Attempting to take another photo")
 				self.sleep(0.5)
-				return self.calculateWorldspacePosition()
+				return self.calculateWorldspacePosition(False, retNone, updatePos)
 			
 			if not retNone:
 				self.log("Saw fewer than 2 markers. Falling back to estimated position")
@@ -456,12 +475,13 @@ class Jeremy:
 		truePos = sumPos / (len(markers) - 1)
 		trueAngle = theta + (math.pi * 2 if theta < -math.pi else 0)
 
-		# subAngle = math.pi - theta
-		# truePos.x += 110 * math.sin(subAngle) + 160 * math.cos(subAngle)
-		# truePos.y -= 110 * math.cos(subAngle) + 160 * math.sin(subAngle)
+		subAngle = math.pi - theta
+		truePos.x += 110 * math.sin(subAngle) + 160 * math.cos(subAngle)
+		truePos.y -= 110 * math.cos(subAngle) + 160 * math.sin(subAngle)
 
-		self.estimated_position = truePos
-		self.estimated_angle = trueAngle
+		if updatePos:
+			self.estimated_position = truePos
+			self.estimated_angle = trueAngle
 
 		return truePos, trueAngle
 
@@ -482,20 +502,19 @@ class Jeremy:
 		#    TURN
 		# ===========
 
-		dt = 0.5 # Sleep for longer???
+		dt = 1 # Sleep for longer???
 
 		_, theta0 = self.calculateWorldspacePosition(True)
 		self.turn(self.turn_power)
 		self.sleep(dt)
 		self.stop()
-		self.sleep(0.1)
 		s1, theta1 = self.calculateWorldspacePosition(True)
 
 		dtheta = theta1 - theta0
 		if dtheta < 0: dtheta += 2 * math.pi # Ensure 0 < dtheta < 360
-		self.estimated_angular_velocity = dtheta / dt
 
-		self.angle_buffer.append((dtheta, dt))
+		self.estimated_angular_velocity = dtheta / (dt - 0.1)
+		self.angle_buffer.append((dtheta, (dt - 0.1)))
 
 		# Determine which corner we are in
 		if s1.x < 5.75 / 2 and s1.y < 5.75 / 2: self.corner = TOP_LEFT_CORNER
@@ -513,12 +532,11 @@ class Jeremy:
 		#    MOVE
 		# ===========
 
-		dt = 0.5 # 1.5
+		dt = 1.5
 
 		self.drive(self.drive_power)
 		self.sleep(dt)
 		self.stop()
-		self.sleep(0.1)
 		s2, theta2 = self.calculateWorldspacePosition(True)
 
 		# Update records
@@ -530,14 +548,29 @@ class Jeremy:
 		self.estimated_angle = theta2
 
 		ds = s2 - s1
-		self.estimated_velocity = ds.mag() / dt
+		self.estimated_velocity = ds.mag() / (dt - 0.1)
+		self.position_buffer.append((ds.mag(), (dt - 0.1)))
 
-		self.position_buffer.append((ds.mag(), dt))
+		self.log("CALIBRATED: Velocity: {}   Ang Velocity: {}".format(self.estimated_velocity, self.estimated_angular_velocity))
+
+		if self.estimated_velocity == 0:
+			self.log("Estimated velocity was zero. Setting default value")
+			self.estimated_angular_velocity = 400
+		if self.estimated_angular_velocity == 0:
+			self.log("Estimated angular velocity was zero. Resetting to defualt")
+			self.estimated_angular_velocity = 0.8
 
 	def doCalibrateThing(self):
 		"""
 		Tom. Again. Sex please
 		"""
+
+		# Always make sure we have $self.buffer_size elements
+		while len(self.position_buffer) > self.buffer_size:
+			self.position_buffer.pop(0)
+
+		while len(self.angle_buffer) > self.buffer_size:
+			self.angle_buffer.pop(0)
 
 		vel = []
 		rot = []
@@ -554,8 +587,19 @@ class Jeremy:
 			if (t < 1e-5): continue
 			rot.append(abs(a) / t)
 
-		if len(vel) > 0: self.estimated_velocity = sum(vel) / len(vel)
-		if len(rot) > 0: self.estimated_angular_velocity = sum(rot) / len(rot)
+		velAdjusted = []
+		rotAdjusted = []
+		mult = 1.5
+		for val in vel:
+			if abs(val) < abs((sum(vel) / len(vel)) * mult):
+				velAdjusted.append(val)
+
+		for val in rot:
+			if abs(val) < abs((sum(rot) / len(rot)) * mult):
+				rotAdjusted.append(val)
+
+		if len(velAdjusted) > 0: self.estimated_velocity = sum(velAdjusted) / len(velAdjusted)
+		if len(rotAdjusted) > 0: self.estimated_angular_velocity = sum(rotAdjusted) / len(rotAdjusted)
 
 		self.log(f"Estimated Velocity: {self.estimated_velocity}")
 		self.log(f"Estimated Ang Vel.: {self.estimated_angular_velocity}")
@@ -582,53 +626,52 @@ class Jeremy:
 		self.turn(power)
 		self.sleep(t)
 		self.stop()
-		self.sleep(0.1) # To allow jeremy to stop spinning
-
-		self.estimated_angle = angle
 
 		# Continue calibrating if needed
-		if len(self.angle_buffer) < self.buffer_size:
-			truePos, trueAngle = self.calculateWorldspacePosition(True, True)
-			if truePos is None:
-				return
+		truePos, trueAngle = self.calculateWorldspacePosition(True, True, False)
+		if truePos is None:
+			self.estimated_angle = angle
+			return
 
-			self.estimated_angle = trueAngle
-			self.estimated_position = truePos
+		trueDTheta = self.estimated_angle - trueAngle
+		while trueDTheta < -math.pi: trueDTheta += math.pi * 2
+		while trueDTheta > math.pi: trueDTheta -= math.pi * 2
 
-			# If too small an angle, don't include it
-			if dtheta > 10 * DEG_TO_RAD:
-				self.angle_buffer.append((dtheta, t))
-			
-			self.doCalibrateThing()
+		self.estimated_angle = trueAngle
+		self.estimated_position = truePos
+
+		# If too small an angle, don't include it
+		if trueDTheta > 10 * DEG_TO_RAD:
+			self.angle_buffer.append((trueDTheta, (t - 0.1)))
+		
+		self.doCalibrateThing()
 
 	def driveApproximateDist(self, dist: float):
 		"""
 		Set the ... tom do this...
 		"""
 
-		self.estimated_position.x += dist * math.cos(self.estimated_angle)
-		self.estimated_position.y += dist * math.sin(self.estimated_angle)
-
 		t = abs(dist) / self.estimated_velocity
 
 		self.drive(self.drive_power * (1 if dist > 0 else -1))
 		self.sleep(t)
 		self.stop()
-		self.sleep(0.1) # Stoppie
 
 		# Continue calibrating if needed
-		if len(self.angle_buffer) < self.buffer_size:
-			truePos, trueAngle = self.calculateWorldspacePosition(True, True)
-			if truePos is None:
-				return
+		truePos, trueAngle = self.calculateWorldspacePosition(True, True, False)
+		if truePos is None:
+			self.estimated_position.x += dist * math.cos(self.estimated_angle)
+			self.estimated_position.y += dist * math.sin(self.estimated_angle)
+			return
 
-			self.estimated_angle = trueAngle
-			self.estimated_position = truePos
+		moved = (self.estimated_position - truePos).mag()
+		if moved > 250:
+			self.position_buffer.append((moved, (t - 0.1)))
 
-			if dist > 250:
-				self.position_buffer.append((dist, t))
+		self.estimated_angle = trueAngle
+		self.estimated_position = truePos
 
-			self.doCalibrateThing()
+		self.doCalibrateThing()
 
 	def turnTo(self, coord: vector.Vector):
 		"""
@@ -650,6 +693,52 @@ class Jeremy:
 			self.turnTo(coord)
 			self.driveApproximateDist(delta.mag() * ((i + 1) / steps))
 
+	def pickUp(self, attempts: int = 1, drive: float = 200):
+		"""
+		Picks up a can.
+
+		> attempts: int (1) - the number of attempts to do for a can.
+
+		> drive: float (300)- the amount to drive forward inbetween each attempt.
+
+		> return: boolean - if the can has been picked up.
+		"""
+
+		self.set_angle("g", 55)
+		self.sleep(0.5)
+		self.set_angle("a", 177)
+		self.sleep(0.5)
+		self.set_angle("g", 105)
+		self.sleep(0.5)
+
+		good = self.has_can()
+		if not good:
+			self.sleep(0.1)
+		good = self.has_can()
+
+		if good:
+			self.set_angle("a", 90)
+			return True
+		else:
+			self.set_angle("g", 55)
+			if attempts <= 1:
+				self.driveApproximateDist(-drive * 3)
+				return False
+			self.driveApproximateDist(drive)
+			self.sleep(0.5)
+			return self.pickUp(attempts - 1, drive)
+
+	def drop(self):
+		if self.has_can():
+			self.setApproximateAngle(self.estimated_angle + math.pi)
+			self.set_angle("a", 0)
+			self.sleep(0.5)
+			self.set_angle("g", 55)
+			self.sleep(0.5)
+			self.set_angle("a", 177)
+			self.sleep(0.5)
+			self.driveApproximateDist(200)
+
 	def sleep(self, t: float):
 		"""
 		Jeremy does nothing now.
@@ -659,6 +748,7 @@ class Jeremy:
 		
 		> t: float - Jeremy does nothing for t seconds.
 		""" 
+
 		start = time.perf_counter()
 		while time.perf_counter() - start < t:
 			pass
@@ -667,6 +757,7 @@ class Jeremy:
 		"""
 		Return a high-precision time in seconds -- more precise than time.time()
 		"""
+
 		return time.perf_counter()
 
 	def log(self, msg: str):
@@ -675,6 +766,7 @@ class Jeremy:
 		
 		> msg: str - Message to output.
 		""" 
+
 		if (self.debug):
 			print("[ INFO ] " + str(msg))
 
@@ -684,6 +776,7 @@ class Jeremy:
 		
 		> msg: str - Warning to output.
 		""" 
+
 		if (self.debug):
 			print("[ WARN ] " + str(msg))
 
@@ -693,5 +786,6 @@ class Jeremy:
 		
 		> msg: str - Error to output.
 		""" 
-		print("[ ERROR ] " + str(msg))
 
+		print("[ ERROR ] " + str(msg))
+		

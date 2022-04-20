@@ -60,7 +60,7 @@ class World:
 
 		if markersPerSide * 2 <= id < markersPerSide * 3:
 			# Bottm side of the box
-			return marker.Marker(vector.Vec3(self.size.x - (id - markersPerSide * 2 + 1), * markerDist, self.size.y), -math.pi / 2, id)
+			return marker.Marker(vector.Vec3(self.size.x - (id - markersPerSide * 2 + 1) * markerDist, self.size.y), -math.pi / 2, id)
 
 		if markersPerSide * 3 <= id < markersPerSide * 4:
 			# Left side of the box
