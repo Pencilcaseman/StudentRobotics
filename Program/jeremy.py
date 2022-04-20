@@ -1,11 +1,11 @@
 """
 Main Arm Servo:
-180 deg = Front
+177 deg = Front
 0 deg = Back
 
 Grabber Arm Servo:
-0 deg = Grab can
-20 deg = Open
+55 deg = Grab can
+105 deg = Open
 """
 
 from cmath import tau
@@ -443,7 +443,10 @@ class Jeremy:
 		> return: (vector.Vector, float) - The true position and angle (deg) calculated.
 		""" 
 
+		a = self.time()
 		markers = self.see()
+		b = self.time()
+		self.log(f"Time taken: {str(a - b)}")
 		for seen in markers:
 			self.log(f"[ VISIBLE ] Cartesian: {seen.cartesian} | ID: {seen.id}")
 
@@ -657,6 +660,7 @@ class Jeremy:
 		self.sleep(t)
 		self.stop()
 
+		a = self.time()
 		# Continue calibrating if needed
 		truePos, trueAngle = self.calculateWorldspacePosition(True, True, False)
 		if truePos is None:
@@ -672,6 +676,8 @@ class Jeremy:
 		self.estimated_position = truePos
 
 		self.doCalibrateThing()
+		b = self.time()
+		self.log(f"MEGA Time taken: {str(a - b)}")
 
 	def turnTo(self, coord: vector.Vector):
 		"""
@@ -705,11 +711,11 @@ class Jeremy:
 		"""
 
 		self.set_angle("g", 55)
-		self.sleep(0.5)
+		self.sleep(0.2)
 		self.set_angle("a", 177)
-		self.sleep(0.5)
+		self.sleep(0.3)
 		self.set_angle("g", 105)
-		self.sleep(0.5)
+		self.sleep(0.2)
 
 		good = self.has_can()
 		if not good:
@@ -721,11 +727,11 @@ class Jeremy:
 			return True
 		else:
 			self.set_angle("g", 55)
+			self.sleep(0.2)
 			if attempts <= 1:
 				self.driveApproximateDist(-drive * 3)
 				return False
 			self.driveApproximateDist(drive)
-			self.sleep(0.5)
 			return self.pickUp(attempts - 1, drive)
 
 	def drop(self):
@@ -788,4 +794,3 @@ class Jeremy:
 		""" 
 
 		print("[ ERROR ] " + str(msg))
-		
