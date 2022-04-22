@@ -42,8 +42,8 @@ DEG_TO_RAD = math.pi / 180
 
 TOP_LEFT_CORNER = 0
 TOP_RIGHT_CORNER = 1
-BOTTOM_LEFT_CORNER = 2
-BOTTOM_RIGHT_CORNER = 3
+BOTTOM_LEFT_CORNER = 3
+BOTTOM_RIGHT_CORNER = 2
 
 WHEELS = {
 	"fl": ["SR0WAF", 0],
@@ -57,7 +57,7 @@ class Jeremy:
 	The main controller for the robot! This is the only thing robot.py should import.
 	""" 
 
-	def __init__(self, debug: bool = True, bs: int = 100, dp: float = 0.5, tp: float = 0.4):
+	def __init__(self, debug: bool = True, bs: int = 100, dp: float = 0.4, tp: float = 0.3):
 		"""
 		Constructor for Jeremy.
 , 
@@ -101,8 +101,9 @@ class Jeremy:
 		# Biases
 		# Callibration Settings:
 		# Hard flooring: 1.075
+		# LEH Carpet: 1.148
 		# fl, fr, bl, br
-		self.wheel_bias_default = vector.Vector(1.075, 1, 1.075, 1)
+		self.wheel_bias_default = vector.Vector(1.1, 1, 1.1, 1) # vector.Vector(1.148, 1, 1.148, 1) # vector.Vector(1.075, 1, 1.075, 1)
 		self.wheel_bias_default /= max(self.wheel_bias_default)
 
 		self.wheel_bias_can = vector.Vector(1.1, 1, 1.1, 1)
@@ -124,28 +125,29 @@ class Jeremy:
 		# Positions calculated from PositionCalculator program.
 		# First output in console when EXE is run.
 		self.canPositionsFloor = (
-			vector.Vec3(2.875000, 0.033500, 0.000000), #  0
-			vector.Vec3(0.033500, 2.875000, 0.000000), #  1
-			vector.Vec3(5.716500, 2.875000, 0.000000), #  2
-			vector.Vec3(2.875000, 5.716500, 0.000000), #  3
-			vector.Vec3(2.875000, 1.135000, 0.000000), #  4
-			vector.Vec3(1.135000, 2.875000, 0.000000), #  5
-			vector.Vec3(4.615000, 2.875000, 0.000000), #  6
-			vector.Vec3(2.875000, 4.615000, 0.000000), #  7
-			vector.Vec3(1.625000, 1.625000, 0.000000), #  8
-			vector.Vec3(4.125000, 1.625000, 0.000000), #  9
-			vector.Vec3(1.625000, 4.125000, 0.000000), # 10
-			vector.Vec3(4.125000, 4.125000, 0.000000), # 11
-			vector.Vec3(2.475000, 1.875000, 0.000000), # 12
-			vector.Vec3(3.275000, 1.875000, 0.000000), # 13
-			vector.Vec3(1.875000, 2.475000, 0.000000), # 14
-			vector.Vec3(1.875000, 3.275000, 0.000000), # 15
-			vector.Vec3(3.875000, 2.475000, 0.000000), # 16
-			vector.Vec3(3.875000, 3.275000, 0.000000), # 17
-			vector.Vec3(2.475000, 3.875000, 0.000000), # 18
-			vector.Vec3(3.275000, 3.875000, 0.000000)  # 19
+			vector.Vec3(2875.000, 33.500, 0000.000), #  0
+			vector.Vec3(33.500, 2875.000, 0000.000), #  1
+			vector.Vec3(5716.500, 2875.000, 0000.000), #  2
+			vector.Vec3(2875.000, 5716.500, 0000.000), #  3
+			vector.Vec3(2875.000, 1135.000, 0000.000), #  4
+			vector.Vec3(1135.000, 2875.000, 0000.000), #  5
+			vector.Vec3(4615.000, 2875.000, 0000.000), #  6
+			vector.Vec3(2875.000, 4615.000, 0000.000), #  7
+			vector.Vec3(1625.000, 1625.000, 0000.000), #  8
+			vector.Vec3(4125.000, 1625.000, 0000.000), #  9
+			vector.Vec3(1625.000, 4125.000, 0000.000), # 10
+			vector.Vec3(4125.000, 4125.000, 0000.000), # 11
+			vector.Vec3(2475.000, 1875.000, 0000.000), # 12
+			vector.Vec3(3275.000, 1875.000, 0000.000), # 13
+			vector.Vec3(1875.000, 2475.000, 0000.000), # 14
+			vector.Vec3(1875.000, 3275.000, 0000.000), # 15
+			vector.Vec3(3875.000, 2475.000, 0000.000), # 16
+			vector.Vec3(3875.000, 3275.000, 0000.000), # 17
+			vector.Vec3(2475.000, 3875.000, 0000.000), # 18
+			vector.Vec3(3275.000, 3875.000, 0000.000)  # 19
 		)
 
+		# TODO: Change these?
 		self.canPositionsRaised = (
 			vector.Vec3(2.575000, 2.308500, 0.000000),
 			vector.Vec3(3.175000, 2.308500, 0.000000),
@@ -178,14 +180,14 @@ class Jeremy:
 		self.set_grabber(False)
 		self.sleep(0.85)
 		self.set_arm(self.ARM_MIDDLE)
-		for val in [1.01, 1.02, 1.03, 1.04, 1.05, 1.06, 1.07, 1.08, 1.09, 1.10]:
+		for val in [1.1475, 1.148, 1.49, 1.15]:
 			wb = vector.Vec4(val, 1, val, 1)
 			wb /= max(wb)
-			self.wheel_bias = wb
+			self.wheel_bias_default = wb
 			self.sleep(10)
 			self.set_display(f"Offset: {val}", 0)
 			self.set_display(f"{wb.x:.1f},{wb.y:.1f},{wb.z:.1f},{wb.w:.1f}", 1)
-			self.drive(0.4)
+			self.drive(self.drive_power)
 			self.sleep(10)
 			self.drive(0)
 
@@ -489,9 +491,12 @@ class Jeremy:
 		""" 
 
 		a = self.time()
-		markers = self.see()
+		markers = sorted(self.see(), key= lambda s: s.id, reverse=False)
+
+		# self.save_image(str(self.time()) + ".png")
+
 		b = self.time()
-		self.log(f"Time taken: {str(a - b)}")
+		self.log(f"Time taken: {str(b - a)}")
 		for seen in markers:
 			self.log(f"[ VISIBLE ] Cartesian: {seen.cartesian} | ID: {seen.id}")
 
@@ -550,7 +555,7 @@ class Jeremy:
 		#    TURN
 		# ===========
 
-		dt = 1 # Sleep for longer???
+		dt = 0.5 # Sleep for longer???
 
 		_, theta0 = self.calculateWorldspacePosition(True)
 		self.turn(self.turn_power)
@@ -571,10 +576,12 @@ class Jeremy:
 		if s1.x > 5.75 / 2 and s1.y > 5.75 / 2: self.corner = BOTTOM_RIGHT_CORNER
 
 		# Make sure to look directly into the arena
-		if self.corner == TOP_LEFT_CORNER: self.setApproximateAngle((7 / 18) * math.pi) # 70 degrees
-		if self.corner == TOP_RIGHT_CORNER: self.setApproximateAngle((8 / 9) * math.pi) # 160 degrees
-		if self.corner == BOTTOM_RIGHT_CORNER: self.setApproximateAngle((-11 / 18) * math.pi) # -110 degrees
-		if self.corner == BOTTOM_LEFT_CORNER: self.setApproximateAngle((-1 / 9) * math.pi) # -20 degrees
+		# self.turnTo(vector.Vec2(5750 / 2, 5750 / 2))
+
+		# if self.zone() == TOP_LEFT_CORNER: self.setApproximateAngle((7 / 18) * math.pi) # 70 degrees
+		# if self.zone() == TOP_RIGHT_CORNER: self.setApproximateAngle((8 / 9) * math.pi) # 160 degrees
+		# if self.zone() == BOTTOM_RIGHT_CORNER: self.setApproximateAngle((-11 / 18) * math.pi) # -110 degrees
+		# if self.zone() == BOTTOM_LEFT_CORNER: self.setApproximateAngle((-1 / 9) * math.pi) # -20 degrees
 
 		# ===========
 		#    MOVE
@@ -689,7 +696,7 @@ class Jeremy:
 		self.estimated_position = truePos
 
 		# If too small an angle, don't include it
-		if trueDTheta > 10 * DEG_TO_RAD:
+		if trueDTheta > 5 * DEG_TO_RAD:
 			self.angle_buffer.append((trueDTheta, (t - 0.1)))
 		
 		self.doCalibrateThing()
@@ -722,7 +729,7 @@ class Jeremy:
 
 		self.doCalibrateThing()
 		b = self.time()
-		self.log(f"MEGA Time taken: {str(a - b)}")
+		self.log(f"MEGA Time taken: {str(b - a)}")
 
 	def turnTo(self, coord: vector.Vector):
 		"""
@@ -738,6 +745,8 @@ class Jeremy:
 		"""
 		Tom help.
 		"""
+
+		self.log("Driving to {}".format(coord))
 
 		for i in range(steps):
 			delta = coord - self.estimated_position
@@ -788,7 +797,7 @@ class Jeremy:
 			self.sleep(0.5)
 			self.set_angle("a", 177)
 			self.sleep(0.5)
-			self.driveApproximateDist(200)
+			self.driveApproximateDist(250)
 
 	def sleep(self, t: float):
 		"""
@@ -812,6 +821,8 @@ class Jeremy:
 		return time.perf_counter()
 
 	def zone(self):
+		if self.R.mode == "dev":
+			return 0
 		return self.R.zone
 
 	def canPosition(self, id: int):

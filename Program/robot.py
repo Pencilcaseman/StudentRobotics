@@ -4,6 +4,8 @@ from vector import Vec2
 # JEZZASPAWN
 jezza = Jeremy()
 
+# jezza.lrCalibration__TEST()
+
 # Create Variables
 cans = [5, 8, 4, 12, 14, 15, 13]
 buffer_point = Vec2(1900, 1900)
@@ -12,6 +14,17 @@ scoring_zone = (Vec2(0, 0), Vec2(0, 0))
 # Calibration
 jezza.initial_calibration()
 
+jezza.driveTo(Vec2(1000, 1000), 4)
+jezza.pickUp(3, 300)
+jezza.driveTo(Vec2(3000, 3000), 3)
+jezza.drop()
+
+jezza.driveTo(Vec2(1000, 4750), 4)
+jezza.pickUp(3, 300)
+jezza.driveTo(Vec2(3000, 3000), 3)
+jezza.drop()
+
+"""
 # Create game loop
 drive_to_buffer = [False, False, False, False, True, False, True]
 zone = jezza.zone()
@@ -35,13 +48,16 @@ lerp_ratio = (scoring_zone[1] - scoring_zone[0]) / len(cans)
 
 # Execute gameloop
 for i in range(len(cans)):
-	jezza.driveTo(jezza.canPosition(cans[i]))
-	if jezza.pickUp():
-		jezza.driveTo(scoring_zone[0] + i * lerp_ratio)
+	jezza.driveTo(jezza.canPosition(cans[i]), 4)
+	if jezza.pickUp(3, 250):
+		jezza.driveTo(scoring_zone[0] + i * lerp_ratio, 3)
+		jezza.sleep(0.5)
 		jezza.drop()
 	else:
 		if drive_to_buffer[i]:
-			jezza.driveTo(buffer_point)
+			jezza.driveTo(buffer_point, 3)
+			jezza.sleep(0.5)
+"""
 
 # jezza.set_grabber(True)
 # jezza.sleep(1)
