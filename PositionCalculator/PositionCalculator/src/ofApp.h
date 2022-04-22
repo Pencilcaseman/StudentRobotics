@@ -1091,17 +1091,17 @@ public:
 
 		float rad = min(inc.mag() * metreToPixel * 0.3, 0.05 * metreToPixel);
 
-		for (const auto& row : pathPoints) {
-			for (const auto& point : row) {
-				auto pos = m_world->m_pos + point * metreToPixel;
-
-				if (point.z == pathFindDefault) ofSetColor(255, 100); // Just a point
-				else if (point.z == pathFindInvalid) ofSetColor(255, 50, 50, 100); // Can't go here
-				else if (point.z == pathFindPath) ofSetColor(240, 3, 252, 100); // Path
-				else if (point.z == pathFindTarget) ofSetColor(50, 255, 50, 100); // GWEEN!
-				ofDrawCircle(pos.x, pos.y, rad);
-			}
-		}
+		// for (const auto& row : pathPoints) {
+		// 	for (const auto& point : row) {
+		// 		auto pos = m_world->m_pos + point * metreToPixel;
+		// 
+		// 		if (point.z == pathFindDefault) ofSetColor(255, 100); // Just a point
+		// 		else if (point.z == pathFindInvalid) ofSetColor(255, 50, 50, 100); // Can't go here
+		// 		else if (point.z == pathFindPath) ofSetColor(240, 3, 252, 100); // Path
+		// 		else if (point.z == pathFindTarget) ofSetColor(50, 255, 50, 100); // GWEEN!
+		// 		ofDrawCircle(pos.x, pos.y, rad);
+		// 	}
+		// }
 
 		return {};
 	}

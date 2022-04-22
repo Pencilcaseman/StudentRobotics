@@ -1,12 +1,47 @@
 from jeremy import Jeremy
-import math
-import vector
+from vector import Vec2
 
+# JEZZASPAWN
 jezza = Jeremy()
-jezza.debugLevel = "no"
-jezza.buffer_size = 100
-jezza.drive_power = 0.5
-jezza.turn_power = 0.4
+
+# Create Variables
+cans = [5, 8, 4, 12, 14, 15, 13]
+buffer_point = Vec2(1900, 1900)
+scoring_zone = (Vec2(0, 0), Vec2(0, 0))
+
+# Calibration
+jezza.initial_calibration()
+
+# Create game loop
+drive_to_buffer = [False, False, False, False, True, False, True]
+zone = jezza.zone()
+if zone == 0:
+	cans = [5, 8, 4, 12, 14, 15, 13]
+	buffer_point = Vec2(1900, 1900)
+	scoring_zone = (Vec2(260, 2500 - 500), Vec2(2500 - 500, 260))
+elif zone == 1:
+	cans = [4, 9, 6, 16, 13, 12, 17]
+	buffer_point = Vec2(3850, 1900)
+	scoring_zone = (Vec2(5750 - 2500 + 500, 260), Vec2(5750 - 260, 2500 - 500))
+elif zone == 2:
+	cans = [6, 11, 7, 19, 17, 16, 18]
+	buffer_point = Vec2(3850, 3850)
+	scoring_zone = (Vec2(5750 - 260, 5750 - 2500 + 500), Vec2(5750 - 2500 + 260, 5750 - 250))
+elif zone == 3:
+	cans = [7, 10, 5, 15, 18, 19, 14]
+	buffer_point = Vec2(1900, 3850)
+	scoring_zone = (Vec2(2500 - 500, 260), Vec2(260, 5750 - 2500 + 500))
+lerp_ratio = (scoring_zone[1] - scoring_zone[0]) / len(cans)
+
+# Execute gameloop
+for i in range(len(cans)):
+	jezza.driveTo(jezza.canPosition(cans[i]))
+	if jezza.pickUp():
+		jezza.driveTo(scoring_zone[0] + i * lerp_ratio)
+		jezza.drop()
+	else:
+		if drive_to_buffer[i]:
+			jezza.driveTo(buffer_point)
 
 # jezza.set_grabber(True)
 # jezza.sleep(1)
@@ -28,114 +63,6 @@ jezza.turn_power = 0.4
 # 	jezza.sleep(10)
 # 	jezza.set_display(f"Offset: {val}", 0)
 # 	jezza.set_display(f"{wb.x:.1f},{wb.y:.1f},{wb.z:.1f},{wb.w:.1f}", 1)
-# 	jezfza.drive(0.4)
+# 	jezza.drive(0.4)
 # 	jezza.sleep(10)
 # 	jezza.drive(0)
-
-"""
-jezza.set_grabber(True)
-jezza.sleep(1)
-jezza.set_arm(jezza.ARM_FRONT)
-jezza.sleep(1)
-jezza.set_display("Jeremy says hi", 0)
-jezza.drive(0.4)
-jezza.sleep(1)
-jezza.stop()
-jezza.sleep(2)
-jezza.set_display("Deepthroating...", 1)
-jezza.set_grabber(False)
-jezza.sleep(0.85)
-jezza.set_arm(jezza.ARM_MIDDLE)
-jezza.drive(0.4)
-jezza.sleep(5)
-jezza.stop()
-jezza.set_display("Shitting...", 1)
-jezza.set_arm(jezza.ARM_FRONT)
-jezza.sleep(0.5)
-jezza.set_grabber(True)
-jezza.sleep(0.5)
-jezza.drive(-0.4)
-jezza.set_arm(jezza.ARM_BACK)
-jezza.sleep(0.5)
-jezza.stop()
-"""
-
-"""
-while True:
-	pos, angle = jezza.calculateWorldspacePosition2()
-	if pos is None or angle is None: continue
-
-	posStr = f"{pos.x:.2f} {pos.y:.2f}"
-	angleStr = angle # f"{angle:.2f}"
-	jezza.set_display(posStr, 0)
-	jezza.set_display(angleStr, 1)
-	jezza.sleep(1)
-"""
-
-"""
-while True:
-	markers = jezza.see()
-	if len(markers) == 0: continue
-
-	idStr = f"ID: {markers[0].id}"
-	angleStr = f"{markers[0].orientation.pitch * (180 / 3.1415926):.2f}"
-	# angleStr = f"{markers[0].spherical.rot_x * (180 / 3.1415926):.2f} {markers[0].spherical.rot_y * (180 / 3.1415926):.2f}"
-	jezza.set_display(idStr, 0)
-	jezza.set_display(angleStr, 1)
-	jezza.sleep(1)
-"""
-
-
-jezza.initial_calibration()
-jezza.sleep(2)
-jezza.setApproximateAngle(0)
-jezza.sleep(2)
-jezza.setApproximateAngle(math.pi / 2)
-jezza.sleep(2)
-
-jezza.driveTo(vector.Vec2(1000, 1000), 4)
-jezza.pickUp(3, 300)
-jezza.driveTo(vector.Vec2(3000, 3000), 3)
-jezza.drop()
-
-jezza.driveTo(vector.Vec2(1000, 5750 / 2), 4)
-jezza.pickUp(3, 300)
-jezza.driveTo(vector.Vec2(3000, 3000), 3)
-jezza.drop()
-
-jezza.driveTo(vector.Vec2(715, 1765), 4)
-jezza.pickUp(3, 300)
-jezza.driveTo(vector.Vec2(3000, 3000), 3)
-jezza.drop()
-
-# jezza.lookAt(vector.Vec2(500, 500))
-# jezza.sleep(2)
-
-"""
-while True:
-	jezza.set_angle("g", 55)
-	jezza.sleep(2)
-	jezza.set_angle("g", 105)
-	jezza.sleep(0.5)
-	jezza.set_display("CAN" if jezza.has_can() else "NO CAN", 0)
-	jezza.sleep(3)
-"""	
-
-"""
-while True:
-	pos, angle = jezza.calculateWorldspacePosition()
-	if pos is None or angle is None: continue
-
-	posStr = f"{pos.x:.2f} {pos.y:.2f}"
-	angleStr = f"{angle:.2f}"
-	jezza.set_display(posStr, 0)
-	jezza.set_display(angleStr, 1)
-	jezza.sleep(1)
-"""
-
-"""
-jezza.sleep(1)
-jezza.pickUp(1, 0)
-jezza.sleep(3)
-jezza.drop()
-"""

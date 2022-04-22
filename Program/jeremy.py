@@ -6,13 +6,35 @@ Main Arm Servo:
 Grabber Arm Servo:
 55 deg = Grab can
 105 deg = Open
+
+Starting Top Left:
+	Can Order:
+		[5, 8, 4, 12, 14, 15, 13]
+	Buffer Point:
+		(1900, 1900)
+
+Starting Top Right:
+	Can Order:
+		[6, 9, 4, 13, 16, 17, 12]
+	Buffer Point:
+		(3850, 1900)
+
+Starting Bottom Left:
+	Can Order:
+		[7, 10, 5, 15, 18, 19, 14]
+	Buffer Point:
+		(1900, 3850)
+
+Starting Bottom Right:
+	Can Order:
+		[6, 11, 7, 19, 17, 16, 18]
+	Buffer Point:
+		Buffer Point(3850, 3850)
+
 """
 
-from cmath import tau
-from re import L
 import sr.robot3 as sr
 import math, time
-from multiprocessing import Pool
 import vector, servo, marker, can, world, screen
 
 RAD_TO_DEG = 180 / math.pi
@@ -35,10 +57,10 @@ class Jeremy:
 	The main controller for the robot! This is the only thing robot.py should import.
 	""" 
 
-	def __init__(self, debug: bool = True):
+	def __init__(self, debug: bool = True, bs: int = 100, dp: float = 0.5, tp: float = 0.4):
 		"""
 		Constructor for Jeremy.
-
+, 
 		> debug: bool (True) - Enable / disable debug mode for more log content.
 		""" 
 
@@ -54,12 +76,10 @@ class Jeremy:
 		self.LEFT = 3
 		self.UNKNOWN = -1
 
-		self.debugLevel = 0
-
 		self.direction = None
 		self.corner = None
-		self.drive_power = 0.4 # Straignt line power for Jeremy (must remain constant?)
-		self.turn_power = 0.3 # Turning power for Jeremy (must remain constant?)
+		self.drive_power = dp # Straignt line power for Jeremy (must remain constant?)
+		self.turn_power = tp # Turning power for Jeremy (must remain constant?)
 		self.last_update_time = 0 # Time since last camera update
 		self.last_known_position = None # Last *KNOWN* position
 		self.last_known_angle = None # Last *KNOWN* angle
@@ -70,7 +90,7 @@ class Jeremy:
 
 		self.position_buffer = []
 		self.angle_buffer = []
-		self.buffer_size = 0
+		self.buffer_size = bs
 
 		# Create variables
 		self.R = sr.Robot()
@@ -104,26 +124,26 @@ class Jeremy:
 		# Positions calculated from PositionCalculator program.
 		# First output in console when EXE is run.
 		self.canPositionsFloor = (
-			vector.Vec3(2.875000, 0.033500, 0.000000),
-			vector.Vec3(0.033500, 2.875000, 0.000000),
-			vector.Vec3(5.716500, 2.875000, 0.000000),
-			vector.Vec3(2.875000, 5.716500, 0.000000),
-			vector.Vec3(2.875000, 1.135000, 0.000000),
-			vector.Vec3(1.135000, 2.875000, 0.000000),
-			vector.Vec3(4.615000, 2.875000, 0.000000),
-			vector.Vec3(2.875000, 4.615000, 0.000000),
-			vector.Vec3(1.625000, 1.625000, 0.000000),
-			vector.Vec3(4.125000, 1.625000, 0.000000),
-			vector.Vec3(1.625000, 4.125000, 0.000000),
-			vector.Vec3(4.125000, 4.125000, 0.000000),
-			vector.Vec3(2.475000, 1.875000, 0.000000),
-			vector.Vec3(3.275000, 1.875000, 0.000000),
-			vector.Vec3(1.875000, 2.475000, 0.000000),
-			vector.Vec3(1.875000, 3.275000, 0.000000),
-			vector.Vec3(3.875000, 2.475000, 0.000000),
-			vector.Vec3(3.875000, 3.275000, 0.000000),
-			vector.Vec3(2.475000, 3.875000, 0.000000),
-			vector.Vec3(3.275000, 3.875000, 0.000000)
+			vector.Vec3(2.875000, 0.033500, 0.000000), #  0
+			vector.Vec3(0.033500, 2.875000, 0.000000), #  1
+			vector.Vec3(5.716500, 2.875000, 0.000000), #  2
+			vector.Vec3(2.875000, 5.716500, 0.000000), #  3
+			vector.Vec3(2.875000, 1.135000, 0.000000), #  4
+			vector.Vec3(1.135000, 2.875000, 0.000000), #  5
+			vector.Vec3(4.615000, 2.875000, 0.000000), #  6
+			vector.Vec3(2.875000, 4.615000, 0.000000), #  7
+			vector.Vec3(1.625000, 1.625000, 0.000000), #  8
+			vector.Vec3(4.125000, 1.625000, 0.000000), #  9
+			vector.Vec3(1.625000, 4.125000, 0.000000), # 10
+			vector.Vec3(4.125000, 4.125000, 0.000000), # 11
+			vector.Vec3(2.475000, 1.875000, 0.000000), # 12
+			vector.Vec3(3.275000, 1.875000, 0.000000), # 13
+			vector.Vec3(1.875000, 2.475000, 0.000000), # 14
+			vector.Vec3(1.875000, 3.275000, 0.000000), # 15
+			vector.Vec3(3.875000, 2.475000, 0.000000), # 16
+			vector.Vec3(3.875000, 3.275000, 0.000000), # 17
+			vector.Vec3(2.475000, 3.875000, 0.000000), # 18
+			vector.Vec3(3.275000, 3.875000, 0.000000)  # 19
 		)
 
 		self.canPositionsRaised = (
@@ -143,6 +163,31 @@ class Jeremy:
 
 		for canPos in self.canPositionsRaised:
 			self.worldView.addCan(can.Can(canPos, True, 0.067))
+
+	def lrCalibration__TEST(self):
+		self.set_grabber(True)
+		self.sleep(1)
+		self.set_arm(self.ARM_FRONT)
+		self.sleep(1)
+		self.set_display("Jeremy says hi", 0)
+		self.drive(0.4)
+		self.sleep(1)
+		self.stop()
+		self.sleep(2)
+		self.set_display("Yummy can...", 1)
+		self.set_grabber(False)
+		self.sleep(0.85)
+		self.set_arm(self.ARM_MIDDLE)
+		for val in [1.01, 1.02, 1.03, 1.04, 1.05, 1.06, 1.07, 1.08, 1.09, 1.10]:
+			wb = vector.Vec4(val, 1, val, 1)
+			wb /= max(wb)
+			self.wheel_bias = wb
+			self.sleep(10)
+			self.set_display(f"Offset: {val}", 0)
+			self.set_display(f"{wb.x:.1f},{wb.y:.1f},{wb.z:.1f},{wb.w:.1f}", 1)
+			self.drive(0.4)
+			self.sleep(10)
+			self.drive(0)
 
 	def drive_wheel(self, power: float, fb: str, lr: str):
 		"""
@@ -526,10 +571,10 @@ class Jeremy:
 		if s1.x > 5.75 / 2 and s1.y > 5.75 / 2: self.corner = BOTTOM_RIGHT_CORNER
 
 		# Make sure to look directly into the arena
-		# if self.corner == TOP_LEFT_CORNER: self.setApproximateAngle(math.pi / 4) # Down and right
-		# if self.corner == TOP_RIGHT_CORNER: self.setApproximateAngle(math.pi * 0.75) # Down and left
-		# if self.corner == BOTTOM_LEFT_CORNER: self.setApproximateAngle(-math.pi / 4) # Up and right
-		# if self.corner == BOTTOM_RIGHT_CORNER: self.setApproximateAngle(-math.pi * 0.75) # Up and left
+		if self.corner == TOP_LEFT_CORNER: self.setApproximateAngle((7 / 18) * math.pi) # 70 degrees
+		if self.corner == TOP_RIGHT_CORNER: self.setApproximateAngle((8 / 9) * math.pi) # 160 degrees
+		if self.corner == BOTTOM_RIGHT_CORNER: self.setApproximateAngle((-11 / 18) * math.pi) # -110 degrees
+		if self.corner == BOTTOM_LEFT_CORNER: self.setApproximateAngle((-1 / 9) * math.pi) # -20 degrees
 
 		# ===========
 		#    MOVE
@@ -765,6 +810,12 @@ class Jeremy:
 		"""
 
 		return time.perf_counter()
+
+	def zone(self):
+		return self.R.zone
+
+	def canPosition(self, id: int):
+		return self.worldView.cans[id].cartesian
 
 	def log(self, msg: str):
 		"""
